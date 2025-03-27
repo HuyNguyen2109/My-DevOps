@@ -1,0 +1,151 @@
+networks:
+  db-internetwork:
+    external: true
+
+services:
+  redis-master:
+    image: bitnami/redis:latest
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+      - REDIS_REPLICATION_MODE=master
+    networks:
+      - db-internetwork
+    volumes:
+      - redis-prod-01:/bitnami/redis/data
+    deploy:
+      update_config:
+        parallelism: 1
+        delay: 5s
+        failure_action: rollback
+      replicas: 1
+      resources:
+        limits:  
+          memory: "2G"  
+        reservations:
+          memory: "512M"
+      restart_policy:
+        condition: any
+      placement:
+        constraints:
+          - node.platform.os == linux
+
+  redis-slave-1:
+    image: bitnami/redis:latest
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+      - REDIS_REPLICATION_MODE=slave
+      - REDIS_MASTER_HOST=redis-master
+    depends_on:
+      - redis-master
+    volumes:
+      - redis-prod-02:/bitnami/redis/data
+    networks:
+      - db-internetwork
+    deploy:
+      update_config:
+        parallelism: 1
+        delay: 5s
+        failure_action: rollback
+      replicas: 1
+      resources:
+        limits:  
+          memory: "2G"  
+        reservations:
+          memory: "512M"
+      restart_policy:
+        condition: any
+      placement:
+        constraints:
+          - node.platform.os == linux
+
+  redis-slave-2:
+    image: bitnami/redis:latest
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+      - REDIS_REPLICATION_MODE=slave
+      - REDIS_MASTER_HOST=redis-master
+    depends_on:
+      - redis-master
+    networks:
+      - db-internetwork
+    volumes:
+      - redis-prod-03:/bitnami/redis/data
+    deploy:
+      update_config:
+        parallelism: 1
+        delay: 5s
+        failure_action: rollback
+      replicas: 1
+      resources:
+        limits:  
+          memory: "2G"  
+        reservations:
+          memory: "512M"
+      restart_policy:
+        condition: any
+      placement:
+        constraints:
+          - node.platform.os == linux
+
+  redis-sentinel-1:
+    image: bitnami/redis-sentinel:latest
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+      - REDIS_MASTER_SET=redis-prod
+      - REDIS_SENTINEL_QUORUM=2
+      - REDIS_SENTINEL_ANNOUNCE_IP=redis-sentinel-1
+      - REDIS_SENTINEL_ANNOUNCE_PORT=26379
+      - REDIS_MASTER_HOST=tasks.redis-master
+    depends_on:
+      - redis-master
+    networks:
+      - db-internetwork
+
+  redis-sentinel-2:
+    image: bitnami/redis-sentinel:latest
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+      - REDIS_MASTER_SET=redis-prod
+      - REDIS_SENTINEL_QUORUM=2
+      - REDIS_SENTINEL_ANNOUNCE_IP=redis-sentinel-2
+      - REDIS_SENTINEL_ANNOUNCE_PORT=26379
+      - REDIS_MASTER_HOST=tasks.redis-master
+    depends_on:
+      - redis-master
+    networks:
+      - db-internetwork
+
+  redis-sentinel-3:
+    image: bitnami/redis-sentinel:latest
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+      - REDIS_MASTER_SET=redis-prod
+      - REDIS_SENTINEL_QUORUM=2
+      - REDIS_SENTINEL_ANNOUNCE_IP=redis-sentinel-3
+      - REDIS_SENTINEL_ANNOUNCE_PORT=26379
+      - REDIS_MASTER_HOST=tasks.redis-master
+    depends_on:
+      - redis-master
+    networks:
+      - db-internetwork
+
+  haproxy-redis:
+    image: haproxy:latest
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    ports:
+      - "6379:6379"
+    depends_on:
+      - redis-sentinel-1
+      - redis-sentinel-2
+      - redis-sentinel-3
+    networks:
+      - db-internetwork
+
+volumes:
+  redis-prod-01:
+    external: true
+  redis-prod-02:
+    external: true
+  redis-prod-03:
+    external: true
