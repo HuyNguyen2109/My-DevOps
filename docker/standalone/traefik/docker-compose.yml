@@ -26,6 +26,10 @@ services:
         constraints:
           - node.role == manager
       labels:
+        # Label for Shepherd service for autoupdate
+        - "shepherd.enable=true"
+        - "service.autodeploy=true"
+        # Frontend
         - traefik.enable=true
         
         - traefik.http.routers.thisproxylocal.rule=Host(`${PUBLIC_IP}`)
