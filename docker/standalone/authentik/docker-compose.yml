@@ -3,7 +3,24 @@
 services:
   authentik-postgresql:
     image: docker.io/library/postgres:16-alpine
-    restart: unless-stopped
+    deploy:
+      update_config:
+        parallelism: 1
+        delay: 5s
+        failure_action: rollback
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.5"   
+          memory: "1G"  
+        reservations:
+          cpus: "0.25"
+          memory: "256M"
+      restart_policy:
+        condition: any
+      placement:
+        constraints:
+          - node.platform.os == linux
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
       start_period: 20s
@@ -16,14 +33,27 @@ services:
       POSTGRES_PASSWORD: ${PG_PASS:?database password required}
       POSTGRES_USER: ${PG_USER:-authentik}
       POSTGRES_DB: ${PG_DB:-authentik}
-    env_file:
-      - .env
     networks:
       - db-internetwork
   redis:
     image: docker.io/library/redis:alpine
     command: --save 60 1 --loglevel warning
-    restart: unless-stopped
+    deploy:
+      update_config:
+        parallelism: 1
+        delay: 5s
+        failure_action: rollback
+      replicas: 1
+      resources:
+        limits:  
+          memory: "2G"  
+        reservations:
+          memory: "512M"
+      restart_policy:
+        condition: any
+      placement:
+        constraints:
+          - node.platform.os == linux
     healthcheck:
       test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
       start_period: 20s
@@ -36,7 +66,6 @@ services:
       - db-internetwork
   authentik-server:
     image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2025.2.2}
-    restart: unless-stopped
     command: server
     environment:
       AUTHENTIK_REDIS__HOST: redis
@@ -44,35 +73,38 @@ services:
       AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
       AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
       AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
     volumes:
       - authentik-server-media:/media
       - authentik-server-templates:/templates
-    env_file:
-      - .env
-    ports:
-      - "${COMPOSE_PORT_HTTP:-9000}:9000"
-      - "${COMPOSE_PORT_HTTPS:-9443}:9443"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=traefik-internetwork"
-      - "traefik.http.routers.authentik.rule=Host(`${UI_URL}`)"
-      - "traefik.http.routers.authentik.entrypoints=websecure"
-      - "traefik.http.services.authentik-server.loadbalancer.server.port=9000"
-      - "traefik.http.routers.authentik.service=authentik-server"
-      - "traefik.http.routers.authentik.tls.certresolver=letsencrypt"
-      - "traefik.http.services.authentik-server.loadbalancer.sticky.cookie=true"
-      - "traefik.http.services.authentik-server.loadbalancer.sticky.cookie.name=authentik_ha"
+    deploy:
+      update_config:
+        parallelism: 1
+        delay: 5s
+        failure_action: rollback
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.platform.os == linux
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.authentik.rule=Host(`${UI_URL}`)"
+        - "traefik.http.routers.authentik.entrypoints=websecure"
+        - "traefik.http.services.authentik-server.loadbalancer.server.port=9000"
+        - "traefik.http.routers.authentik.service=authentik-server"
+        - "traefik.http.routers.authentik.tls.certresolver=letsencrypt"
+        - "traefik.http.services.authentik-server.loadbalancer.sticky.cookie=true"
+        - "traefik.http.services.authentik-server.loadbalancer.sticky.cookie.name=authentik_ha"
     depends_on:
-      authentik-postgresql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - authentik-postgresql
+      - redis
     networks:
       - traefik-internetwork
       - db-internetwork
   authentik-worker:
     image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2025.2.2}
-    restart: unless-stopped
     command: worker
     environment:
       AUTHENTIK_REDIS__HOST: redis
@@ -80,28 +112,30 @@ services:
       AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
       AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
       AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
-    # `user: root` and the docker socket volume are optional.
-    # See more for the docker socket integration here:
-    # https://goauthentik.io/docs/outposts/integrations/docker
-    # Removing `user: root` also prevents the worker from fixing the permissions
-    # on the mounted folders, so when removing this make sure the folders have the correct UID/GID
-    # (1000:1000 by default)
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
     user: root
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - authentik-worker-media:/media
       - authentik-worker-certs:/certs
       - authentik-worker-templates:/templates
-    env_file:
-      - .env
     depends_on:
-      authentik-postgresql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - authentik-postgresql
+      - redis
     networks:
       - db-internetwork
       - traefik-internetwork
+    deploy:
+      update_config:
+        parallelism: 1
+        delay: 5s
+        failure_action: rollback
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.platform.os == linux
 
 networks:
   db-internetwork:
