@@ -1,0 +1,39 @@
+version: "3.7"
+
+services:
+  kasm:
+    image: linuxserver/kasm:latest
+    networks:
+      - traefik-swarm-network
+    cap_add: 
+      - ALL
+    environment:
+      - TZ=Asia/Ho_Chi_Minh
+      - DOCKER_HUB_USERNAME=${DOCKER_HUB_USER} #optional
+      - DOCKER_HUB_PASSWORD=${DOCKER_HUB_PASSWORD} #optional
+    volumes:
+      - /datacenter/docker/kasm/data:/opt
+      - /datacenter/docker/kasm/profiles:/profiles #optional
+      - /lib/modules:/lib/modules
+    ports:
+      - 3000:3000
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=traefik-swarm-network"
+        - "traefik.http.routers.kasm.entrypoints=websecure"
+        - "traefik.http.services.kasm.loadbalancer.server.port=443"
+        - "traefik.http.services.kasm.loadbalancer.server.scheme=https"
+        - "traefik.http.routers.kasm.rule=Host(`kasm.mcbourdeux-workstation.com`)"
+        - "traefik.http.routers.kasm.tls=true"
+        - "traefik.http.routers.kasm.tls.certresolver=letsencrypt"
+        - "traefik.http.services.kasm.loadbalancer.sticky.cookie=true"
+        - "traefik.http.services.kasm.loadbalancer.sticky.cookie.name=kasm_ha"
+
+networks:
+  traefik-swarm-network:
+    external: true
