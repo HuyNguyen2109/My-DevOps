@@ -1,0 +1,47 @@
+global:
+  checkNewVersion: true
+
+log:
+  level: DEBUG
+  filePath: "/logs/traefik.log"
+
+accessLog:
+  filePath: "/logs/access.log"
+  bufferingSize: 100
+
+api:
+  insecure: true
+  dashboard: true
+
+entryPoints:
+  console:
+    address: ":8088"
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: "websecure"
+          scheme: "https"
+          permanent: true
+  websecure:
+    address: ":443"
+
+providers:
+  swarm:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: traefik-internetwork
+  file:
+    filename: "/etc/traefik/middlewares.yaml"
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: "${CF_API_EMAIL}"  # Replace with your email
+      storage: "acme/acme.json"
+      caServer: "https://acme-v02.api.letsencrypt.org/directory"
+      dnsChallenge:
+        provider: cloudflare
+      httpChallenge:
+        entryPoint: web

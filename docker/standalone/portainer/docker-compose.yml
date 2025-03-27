@@ -1,17 +1,17 @@
 services:
   portainer:
     image: portainer/portainer-ee:latest
-    container_name: portainer-prd-01
-    command: -H unix:///var/run/docker.sock
-    restart: always
+    command: -H tcp://tasks.agent:9001 --tlsskipverify
     networks:
       - traefik-internetwork
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/localtime:/etc/localtime
       - portainer-data:/data
     labels:
       # Frontend
       - "traefik.enable=true"
+      - "traefik.docker.network=traefik-swarm-network"
       - "traefik.http.routers.portainer.rule=Host(`${UI_URL}`)"
       - "traefik.http.routers.portainer.entrypoints=websecure"
       - "traefik.http.services.portainer.loadbalancer.server.port=9000"
