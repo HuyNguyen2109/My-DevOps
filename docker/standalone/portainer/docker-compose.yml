@@ -1,4 +1,19 @@
 services:
+  agent:
+    image: portainer/agent
+    environment:
+      AGENT_CLUSTER_ADDR: tasks.agent
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /mnt/big-data/docker/container-data/volumes:/var/lib/docker/volumes
+    networks:
+      - traefik-internetwork
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.platform.os == linux
+
   portainer:
     image: portainer/portainer-ee:latest
     command: -H tcp://tasks.agent:9001 --tlsskipverify
@@ -8,17 +23,28 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - /etc/localtime:/etc/localtime
       - portainer-data:/data
-    labels:
-      # Frontend
-      - "traefik.enable=true"
-      - "traefik.docker.network=traefik-swarm-network"
-      - "traefik.http.routers.portainer.rule=Host(`${UI_URL}`)"
-      - "traefik.http.routers.portainer.entrypoints=websecure"
-      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
-      - "traefik.http.routers.portainer.service=portainer"
-      - "traefik.http.routers.portainer.tls.certresolver=letsencrypt"
-      - "traefik.http.services.portainer.loadbalancer.sticky.cookie=true"
-      - "traefik.http.services.portainer.loadbalancer.sticky.cookie.name=portainer_ha"
+    deploy:
+      restart_policy:
+        condition: any
+      update_config:
+        parallelism: 1
+        delay: 5s
+        failure_action: rollback
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        # Frontend
+        - "traefik.enable=true"
+        - "traefik.http.routers.portainer.rule=Host(`${UI_URL}`)"
+        - "traefik.http.routers.portainer.entrypoints=websecure"
+        - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+        - "traefik.http.routers.portainer.service=portainer"
+        - "traefik.http.routers.portainer.tls.certresolver=letsencrypt"
+        - "traefik.http.services.portainer.loadbalancer.sticky.cookie=true"
+        - "traefik.http.services.portainer.loadbalancer.sticky.cookie.name=portainer_ha"
 
 volumes:
   portainer-data:
