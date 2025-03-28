@@ -1,0 +1,89 @@
+services:
+  traefik:
+    image: traefik:latest
+    networks:
+      - traefik-internetwork
+    ports:
+      - 80:80
+      - 443:443
+    deploy:
+      mode: global
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "512M"
+        reservations:
+          cpus: "0.25"  
+          memory: "256M"
+      update_config:
+        parallelism: 1
+        delay: 5s
+        failure_action: rollback
+        max_failure_ratio: 0.5
+      restart_policy:
+        condition: any
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        # Label for Shepherd service for autoupdate
+        - "shepherd.enable=true"
+        - "service.autodeploy=true"
+        # Frontend
+        - traefik.enable=true
+        
+        - traefik.http.routers.thisproxylocal.rule=Host(`${PUBLIC_IP}`)
+        - traefik.http.routers.thisproxylocal.entryPoints=console
+        - traefik.http.routers.thisproxylocal.service=api@internal
+        
+        - traefik.http.services.thisproxytls.loadbalancer.server.port=8088
+        - traefik.http.routers.thisproxytls.rule=Host(`${TRAEFIK_URL}`)
+        - traefik.http.routers.thisproxytls.entrypoints=websecure
+        - traefik.http.routers.thisproxytls.service=api@internal
+        - traefik.http.routers.thisproxytls.tls.certresolver=letsencrypt
+        # Authentication with Authentik server
+        - "traefik.http.routers.thisproxylocal.middlewares=authentik@file"
+        - "traefik.http.routers.thisproxytls.middlewares=authentik@file"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-acme:/acme
+      - traefik-logs:/logs
+      - ./config/middlewares.yaml:/etc/traefik/middlewares.yaml
+      - ./config/traefik.yaml:/etc/traefik/traefik.yaml
+    environment:
+      - CF_API_EMAIL=${CF_API_EMAIL}
+      - CF_API_KEY=${CF_API_KEY}
+    
+  whoami:
+    image: "traefik/whoami"
+    networks:
+      - traefik-internetwork
+    deploy:
+      mode: global
+      update_config:
+        parallelism: 1
+        delay: 5s
+        failure_action: rollback
+      restart_policy:
+        condition: any
+      placement:
+        constraints:
+          - node.platform.os == linux
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.whoami.rule=Host(`${TRAEFIK_URL}`) && Path(`/health-check`)
+        - traefik.http.routers.whoami.entrypoints=websecure
+        - traefik.http.routers.whoami.tls.certresolver=letsencrypt
+        - traefik.http.services.whoami.loadbalancer.server.port=80
+        - traefik.http.services.whoami.loadbalancer.sticky.cookie=true
+        - traefik.http.services.whoami.loadbalancer.sticky.cookie.name=whoami_ha
+
+volumes:
+  traefik-acme:
+    external: true
+  traefik-logs:
+    external: true
+      
+networks:
+  traefik-internetwork:
+    external: true
