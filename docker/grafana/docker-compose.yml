@@ -1,8 +1,6 @@
 services:
   grafana:
     image: grafana/grafana-oss:main-ubuntu
-    container_name: grafana
-    restart: unless-stopped
     environment:
       - GF_LOG_LEVEL=${GF_LOG_LEVEL}
       - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}
@@ -15,13 +13,32 @@ services:
       - traefik-internetwork
     volumes:
       - grafana_storage:/var/lib/grafana
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=traefik-internetwork"
-      - "traefik.http.routers.grafana.rule=Host(`grafana.${ROOT_DOMAIN}`)"
-      - "traefik.http.routers.grafana.entrypoints=websecure"
-      - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
-      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: "256M"
+        reservations:
+          cpus: "0.125"  
+          memory: "128M"
+      update_config:
+        parallelism: 1
+        delay: 5s
+        failure_action: rollback
+        max_failure_ratio: 0.5
+      restart_policy:
+        condition: any
+      placement:
+        constraints:
+          - node.platform.os == linux
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.grafana.rule=Host(`grafana.${ROOT_DOMAIN}`)"
+        - "traefik.http.routers.grafana.entrypoints=websecure"
+        - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
+        - "traefik.http.services.grafana.loadbalancer.server.port=3000"
 
 networks:
   traefik-internetwork:
