@@ -1,8 +1,6 @@
 services:
   grafana:
     image: grafana/grafana-oss:main-ubuntu
-    container_name: grafana
-    restart: unless-stopped
     environment:
       - GF_LOG_LEVEL=${GF_LOG_LEVEL}
       - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}
