@@ -7,9 +7,16 @@ services:
       mode: global
       restart_policy:
         condition: on-failure
+    configs:
+      - source: proxy_config_prd
+        target: /etc/nginx/nginx.conf
     networks:
       - traefik-internetwork
 
 networks:
   traefik-internetwork:
+    external: true
+
+configs:
+  proxy_config_prd:
     external: true
