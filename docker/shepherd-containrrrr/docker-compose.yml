@@ -8,6 +8,7 @@ services:
       RUN_ONCE_AND_EXIT: 'true'
       ROLLBACK_ON_FAILURE: 'true'
       IMAGE_AUTOCLEAN_LIMIT: '5'
+      APPRISE_SIDECAR_URL: tasks.notify:5000
     networks:
       - traefik-internetwork
     volumes:
@@ -35,6 +36,17 @@ services:
       - "Asia/Ho_Chi_Minh"
       - "LOG_LEVEL=info"
       - "LOG_JSON=false"
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+  
+  notify:
+    image: mazzolino/apprise-microservice:0.3.0
+    networks:
+      - traefik-internetwork
+    environment:
+      NOTIFICATION_URLS: ${NOTIFICATION_URLS}
     deploy:
       placement:
         constraints:

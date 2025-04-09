@@ -39,9 +39,6 @@ services:
           cpus: "0.125"  
           memory: "128M"
       labels:
-      # Label for Shepherd service for autoupdate
-      - "shepherd.enable=true"
-      - "service.autodeploy=true"
       # Frontend
       - "traefik.enable=true"
       - "traefik.http.routers.ntfy.rule=Host(`${BASE_URL}`)"
