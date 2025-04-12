@@ -1,0 +1,75 @@
+services:
+  ntfy-alert-bridge:
+    image: docker.io/mcbourdeux/my-repo:ntfy-bridge-alert
+    networks:
+      - traefik-internetwork
+    environment:
+      - NTFY_TOPIC=${NTFY_TOPIC}
+      - NTFY_URL=${NTFY_URL}
+      - NTFY_USER=${NTFY_USER}
+      - NTFY_PASS=${NTFY_PASS}
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: any
+        delay: 5s
+      update_config:
+        parallelism: 1
+        delay: 10s
+      placement:
+        constraints:
+          - node.platform.os == linux
+      
+  alertmanager:
+    image: prom/alertmanager:latest
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--cluster.listen-address=0.0.0.0:9094'
+      - '--cluster.peer=alertmanager:9094'
+      - '--cluster.gossip-interval=200ms'
+      - '--cluster.pushpull-interval=1m'
+      - '--web.external-url=http://alertmanager:9093'
+    secrets:
+      - ntfy_token
+    networks:
+      - traefik-internetwork
+    ports:
+      - published: 9093
+        target: 9093
+        mode: host
+    deploy:
+      mode: replicated
+      replicas: 3
+      restart_policy:
+        condition: any
+        delay: 5s
+      update_config:
+        parallelism: 1
+        delay: 10s
+      placement:
+        constraints:
+          - node.platform.os == linux
+    volumes:
+      - alertmanager_config:/etc/alertmanager
+      - alertmanager_data:/alertmanager
+      - ./config/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+
+secrets:
+  ntfy_token:
+    external: true
+
+configs:
+  alertmanager_prd:
+    external: true
+
+volumes:
+  alertmanager_config:
+    external: true
+  alertmanager_data:
+    external: true
+
+networks:
+  traefik-internetwork:
+    external: true
