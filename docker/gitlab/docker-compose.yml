@@ -1,6 +1,6 @@
 services:
   web:
-    image: "gitlab/gitlab-ce:latest"
+    image: "zengxs/gitlab:ce"
     networks:
         - traefik-internetwork
         - db-internetwork
