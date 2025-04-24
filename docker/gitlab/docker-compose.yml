@@ -6,7 +6,7 @@ services:
         - db-internetwork
     environment:
         GITLAB_OMNIBUS_CONFIG: |
-            external_url 'https://${BASE_URL}'
+            external_url 'https://ENV['BASE_URL']'
             gitlab_rails['gitlab_default_color_mode'] = 3
             gitlab_rails['gitlab_shell_ssh_port'] = 2224
             nginx['listen_https'] = false
@@ -19,7 +19,7 @@ services:
             gitlab_rails['db_adapter'] = "postgresql"
             gitlab_rails['db_database'] = "gitlabhq_production"
             gitlab_rails['db_username'] = "gitlab_admin"
-            gitlab_rails['db_password'] = `${GITLAB_ADMIN_DB_PASSWORD}`
+            gitlab_rails['db_password'] = ENV['GITLAB_ADMIN_DB_PASSWORD']
             gitlab_rails['db_host'] = "postgresql-master"
             gitlab_rails['db_port'] = 5432
             
@@ -28,10 +28,10 @@ services:
             gitlab_rails['object_store']['proxy_download'] = false
             gitlab_rails['object_store']['connection'] = {
               'provider' => 'AWS',
-              'aws_access_key_id' => `${MINIO_ACCESS_KEY}`,
-              'aws_secret_access_key' => `${MINIO_SECRET_KEY}`,
+              'aws_access_key_id' => ENV['MINIO_ACCESS_KEY'],
+              'aws_secret_access_key' => ENV['MINIO_SECRET_KEY'],
               'region' => 'us-east-1', # can be anything, MinIO ignores it
-              'endpoint' => `${MINIO_URL}`, # replace with your MinIO service URL
+              'endpoint' => ENV['MINIO_URL'], # replace with your MinIO service URL
               'path_style' => true # critical for MinIO!
             }
 
