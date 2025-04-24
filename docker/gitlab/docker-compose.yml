@@ -6,7 +6,7 @@ services:
         - db-internetwork
     environment:
         GITLAB_OMNIBUS_CONFIG: |
-            external_url 'https://ENV['BASE_URL']'
+            external_url "https://#{ENV['BASE_URL']}"
             gitlab_rails['gitlab_default_color_mode'] = 3
             gitlab_rails['gitlab_shell_ssh_port'] = 2224
             nginx['listen_https'] = false
