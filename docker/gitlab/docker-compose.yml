@@ -1,41 +1,94 @@
-version: '3.6'
 services:
   web:
-    image: 'gitlab/gitlab-ce:latest'
-    restart: always
+    image: "gitlab/gitlab-ce:latest"
+    networks:
+        - traefik-internetwork
+        - db-internetwork
+    environment:
+        GITLAB_OMNIBUS_CONFIG: |
+            external_url 'https://${BASE_URL}'
+            gitlab_rails['gitlab_default_color_mode'] = 3
+            gitlab_rails['gitlab_shell_ssh_port'] = 2224
+            nginx['listen_https'] = false
+            nginx['listen_port'] = 80
+            gitlab_rails['redis_sentinels'] = [
+              { 'host' => 'redis-sentinel-1', 'port' => 26379 },
+              { 'host' => 'redis-sentinel-2', 'port' => 26379 },
+              { 'host' => 'redis-sentinel-3', 'port' => 26379 }
+            ]
+            gitlab_rails['db_adapter'] = "postgresql"
+            gitlab_rails['db_database'] = "gitlabhq_production"
+            gitlab_rails['db_username'] = "gitlab_admin"
+            gitlab_rails['db_password'] = ${GITLAB_ADMIN_DB_PASSWORD}
+            gitlab_rails['db_host'] = "postgresql-master"
+            gitlab_rails['db_port'] = 5432
+            
+            # Object Storage Configuration for MinIO
+            gitlab_rails['object_store']['enabled'] = true
+            gitlab_rails['object_store']['proxy_download'] = false
+            gitlab_rails['object_store']['connection'] = {
+              'provider' => 'AWS',
+              'aws_access_key_id' => `${MINIO_ACCESS_KEY}`,
+              'aws_secret_access_key' => `${MINIO_SECRET_KEY}`,
+              'region' => 'us-east-1', # can be anything, MinIO ignores it
+              'endpoint' => `${MINIO_URL}`, # replace with your MinIO service URL
+              'path_style' => true # critical for MinIO!
+            }
+
+            # Buckets
+            gitlab_rails['object_store']['objects']['artifacts']['bucket'] = 'gitlab-artifacts'
+            gitlab_rails['object_store']['objects']['external_diffs']['bucket'] = 'gitlab-mr-diffs'
+            gitlab_rails['object_store']['objects']['lfs']['bucket'] = 'gitlab-lfs'
+            gitlab_rails['object_store']['objects']['uploads']['bucket'] = 'gitlab-uploads'
+            gitlab_rails['object_store']['objects']['packages']['bucket'] = 'gitlab-packages'
+            gitlab_rails['object_store']['objects']['dependency_proxy']['bucket'] = 'gitlab-dependency-proxy'
+            gitlab_rails['object_store']['objects']['terraform_state']['bucket'] = 'gitlab-terraform-state'
+            gitlab_rails['object_store']['objects']['ci_secure_files']['bucket'] = 'gitlab-ci-secure-files'
+            gitlab_rails['object_store']['objects']['pages']['bucket'] = 'gitlab-pages'
+    ports:
+        - "2224:22"
+    volumes:
+        - "gitlab_config:/etc/gitlab"
+        - "gitlab_logs:/var/log/gitlab"
+        - "gitlab_data:/var/opt/gitlab"
+    shm_size: "256m"
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+          - "traefik.enable=true"
+          - "traefik.http.routers.gitlab-app.entrypoints=web"
+          - "traefik.http.routers.gitlab-app.rule=Host(`${BASE_URL}`)"
+          - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
+          - "traefik.http.routers.gitlab-app.middlewares=https-redirect"
+          - "traefik.http.routers.gitlab-app-secure.entrypoints=websecure"
+          - "traefik.http.routers.gitlab-app-secure.rule=Host(`${BASE_URL}`)"
+          - "traefik.http.routers.gitlab-app-secure.tls=true"
+          - "traefik.http.routers.gitlab-app-secure.tls.certresolver=letsencrypt"
+          - "traefik.http.routers.gitlab-app-secure.service=gitlab"
+          - "traefik.http.services.gitlab.loadbalancer.server.port=80"
+
+  gitlab-runner:
+    image: gitlab/gitlab-runner:alpine
     networks:
       - traefik-internetwork
-      - postgres-net
-    environment:
-      GITLAB_OMNIBUS_CONFIG: |
-        external_url 'https://gitlab.mcbourdeux-workstation.com'
-        gitlab_rails['gitlab_shell_ssh_port'] = 2224
-        nginx['listen_https'] = false
-        nginx['listen_port'] = 80
-    ports:
-      - '2224:22'
-    volumes:
-      - '/datacenter/docker/gitlab/config:/etc/gitlab'
-      - '/datacenter/docker/gitlab/logs:/var/log/gitlab'
-      - '/datacenter/docker/gitlab/data:/var/opt/gitlab'
-    shm_size: '256m'
-    lebels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=traefik-internetwork"
-      - "traefik.http.routers.gitlab-app.entrypoints=web"
-      - "traefik.http.routers.gitlab-app.rule=Host(`gitlab.mcbourdeux-workstation.com`)"
-      - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
-      - "traefik.http.routers.gitlab-app.middlewares=https-redirect"
-      - "traefik.http.routers.gitlab-app-secure.entrypoints=websecure"
-      - "traefik.http.routers.gitlab-app-secure.rule=Host(`gitlab.mcbourdeux-workstation.com`)"
-      - "traefik.http.routers.gitlab-app-secure.tls=true"
-      - "traefik.http.routers.gitlab-app-secure.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.gitlab-app-secure.service=gitlab"
-      - "traefik.http.services.gitlab.loadbalancer.server.port=80"
-      - "traefik.docker.network=traefik-internetwork"
+    deploy:
+      mode: replicated
+      replicas: 2
+
+volumes:
+  gitlab_config:
+    external: true
+  gitlab_logs:
+    external: true
+  gitlab_data:
+    external: true
 
 networks:
-  traefik-internetwork:
-    external: true
-  postgres-net:
-    external: true
+    traefik-internetwork:
+        external: true
+    db-internetwork:
+        external: true
