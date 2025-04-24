@@ -19,7 +19,7 @@ services:
             gitlab_rails['db_adapter'] = "postgresql"
             gitlab_rails['db_database'] = "gitlabhq_production"
             gitlab_rails['db_username'] = "gitlab_admin"
-            gitlab_rails['db_password'] = ${GITLAB_ADMIN_DB_PASSWORD}
+            gitlab_rails['db_password'] = `${GITLAB_ADMIN_DB_PASSWORD}`
             gitlab_rails['db_host'] = "postgresql-master"
             gitlab_rails['db_port'] = 5432
             
