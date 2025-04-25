@@ -1,8 +1,6 @@
 services:
   web:
     image: "zengxs/gitlab:ce"
-    entrypoint: ["/assets/wrapper"]
-    command: []
     networks:
       - traefik-internetwork
       - db-internetwork
