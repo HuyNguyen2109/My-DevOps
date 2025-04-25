@@ -91,6 +91,8 @@ services:
     image: gitlab/gitlab-runner:alpine
     networks:
       - traefik-internetwork
+    volumes:
+      - .gitlab-runners.toml:/etc/gitlab-runner/config.toml
     deploy:
       mode: replicated
       replicas: 2
