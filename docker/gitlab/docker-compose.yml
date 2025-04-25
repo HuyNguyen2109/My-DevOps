@@ -91,15 +91,17 @@ services:
     image: gitlab/gitlab-runner:alpine
     networks:
       - traefik-internetwork
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     deploy:
       mode: replicated
       replicas: 2
     configs:
-      - source: gitlab-runner.toml
+      - source: gitlab-runners.toml
         target: /etc/gitlab-runner/config.toml
 
 configs:
-  gitlab-runner.toml:
+  gitlab-runners.toml:
     external: true
 
 volumes:
