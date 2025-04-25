@@ -15,12 +15,8 @@ services:
             gitlab_rails['gitlab_shell_ssh_port'] = 2224
             nginx['listen_https'] = false
             nginx['listen_port'] = 80
-            gitlab_rails['redis_sentinels'] = [
-              { 'host' => 'redis-sentinel-1', 'port' => 26379 },
-              { 'host' => 'redis-sentinel-2', 'port' => 26379 },
-              { 'host' => 'redis-sentinel-3', 'port' => 26379 }
-            ]
-            gitlab_rails['redis_master_name'] = 'redis-master'
+            gitlab_rails['redis_host'] = "haproxy-redis"
+            gitlab_rails['redis_port'] = 6379
             gitlab_rails['db_adapter'] = "postgresql"
             gitlab_rails['db_database'] = "gitlabhq_production"
             gitlab_rails['db_username'] = "gitlab_admin"
