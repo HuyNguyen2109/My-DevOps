@@ -2,56 +2,57 @@ services:
   web:
     image: "zengxs/gitlab:ce"
     networks:
-        - traefik-internetwork
-        - db-internetwork
+      - traefik-internetwork
+      - db-internetwork
     environment:
-        GITLAB_ADMIN_DB_PASSWORD: ${GITLAB_ADMIN_DB_PASSWORD}
-        MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
-        MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
-        MINIO_URL: ${MINIO_URL}
-        GITLAB_OMNIBUS_CONFIG: |
-            external_url "https://#{ENV['BASE_URL']}"
-            gitlab_rails['gitlab_default_color_mode'] = 3
-            gitlab_rails['gitlab_shell_ssh_port'] = 2224
-            nginx['listen_https'] = false
-            nginx['listen_port'] = 80
-            gitlab_rails['redis_host'] = "haproxy-redis"
-            gitlab_rails['redis_port'] = 6379
-            gitlab_rails['db_adapter'] = "postgresql"
-            gitlab_rails['db_database'] = "gitlabhq_production"
-            gitlab_rails['db_username'] = "gitlab_admin"
-            gitlab_rails['db_password'] = ENV['GITLAB_ADMIN_DB_PASSWORD']
-            gitlab_rails['db_host'] = "postgresql-master"
-            gitlab_rails['db_port'] = 5432
-            
-            # Object Storage Configuration for MinIO
-            gitlab_rails['object_store']['enabled'] = true
-            gitlab_rails['object_store']['proxy_download'] = false
-            gitlab_rails['object_store']['connection'] = {
-              'provider' => 'AWS',
-              'aws_access_key_id' => ENV['MINIO_ACCESS_KEY'],
-              'aws_secret_access_key' => ENV['MINIO_SECRET_KEY'],
-              'region' => 'us-east-1', # can be anything, MinIO ignores it
-              'endpoint' => ENV['MINIO_URL'], # replace with your MinIO service URL
-              'path_style' => true # critical for MinIO!
-            }
+      BASE_URL: ${BASE_URL}
+      GITLAB_ADMIN_DB_PASSWORD: ${GITLAB_ADMIN_DB_PASSWORD}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_URL: ${MINIO_URL}
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url "https://#{ENV['BASE_URL']}"
+        gitlab_rails['gitlab_default_color_mode'] = 3
+        gitlab_rails['gitlab_shell_ssh_port'] = 2224
+        nginx['listen_https'] = false
+        nginx['listen_port'] = 80
+        gitlab_rails['redis_host'] = "haproxy-redis"
+        gitlab_rails['redis_port'] = 6379
+        gitlab_rails['db_adapter'] = "postgresql"
+        gitlab_rails['db_database'] = "gitlabhq_production"
+        gitlab_rails['db_username'] = "gitlab_admin"
+        gitlab_rails['db_password'] = ENV['GITLAB_ADMIN_DB_PASSWORD']
+        gitlab_rails['db_host'] = "postgresql-master"
+        gitlab_rails['db_port'] = 5432
+        
+        # Object Storage Configuration for MinIO
+        gitlab_rails['object_store']['enabled'] = true
+        gitlab_rails['object_store']['proxy_download'] = false
+        gitlab_rails['object_store']['connection'] = {
+          'provider' => 'AWS',
+          'aws_access_key_id' => ENV['MINIO_ACCESS_KEY'],
+          'aws_secret_access_key' => ENV['MINIO_SECRET_KEY'],
+          'region' => 'us-east-1', # can be anything, MinIO ignores it
+          'endpoint' => ENV['MINIO_URL'], # replace with your MinIO service URL
+          'path_style' => true # critical for MinIO!
+        }
 
-            # Buckets
-            gitlab_rails['object_store']['objects']['artifacts']['bucket'] = 'gitlab-artifacts'
-            gitlab_rails['object_store']['objects']['external_diffs']['bucket'] = 'gitlab-mr-diffs'
-            gitlab_rails['object_store']['objects']['lfs']['bucket'] = 'gitlab-lfs'
-            gitlab_rails['object_store']['objects']['uploads']['bucket'] = 'gitlab-uploads'
-            gitlab_rails['object_store']['objects']['packages']['bucket'] = 'gitlab-packages'
-            gitlab_rails['object_store']['objects']['dependency_proxy']['bucket'] = 'gitlab-dependency-proxy'
-            gitlab_rails['object_store']['objects']['terraform_state']['bucket'] = 'gitlab-terraform-state'
-            gitlab_rails['object_store']['objects']['ci_secure_files']['bucket'] = 'gitlab-ci-secure-files'
-            gitlab_rails['object_store']['objects']['pages']['bucket'] = 'gitlab-pages'
+        # Buckets
+        gitlab_rails['object_store']['objects']['artifacts']['bucket'] = 'gitlab-artifacts'
+        gitlab_rails['object_store']['objects']['external_diffs']['bucket'] = 'gitlab-mr-diffs'
+        gitlab_rails['object_store']['objects']['lfs']['bucket'] = 'gitlab-lfs'
+        gitlab_rails['object_store']['objects']['uploads']['bucket'] = 'gitlab-uploads'
+        gitlab_rails['object_store']['objects']['packages']['bucket'] = 'gitlab-packages'
+        gitlab_rails['object_store']['objects']['dependency_proxy']['bucket'] = 'gitlab-dependency-proxy'
+        gitlab_rails['object_store']['objects']['terraform_state']['bucket'] = 'gitlab-terraform-state'
+        gitlab_rails['object_store']['objects']['ci_secure_files']['bucket'] = 'gitlab-ci-secure-files'
+        gitlab_rails['object_store']['objects']['pages']['bucket'] = 'gitlab-pages'
     ports:
-        - "2224:22"
+      - "2224:22"
     volumes:
-        - "gitlab_config:/etc/gitlab"
-        - "gitlab_logs:/var/log/gitlab"
-        - "gitlab_data:/var/opt/gitlab"
+      - "gitlab_config:/etc/gitlab"
+      - "gitlab_logs:/var/log/gitlab"
+      - "gitlab_data:/var/opt/gitlab"
     shm_size: "256m"
     deploy:
       mode: replicated
@@ -60,7 +61,6 @@ services:
         parallelism: 1
         delay: 5s
         failure_action: rollback
-      replicas: 1
       restart_policy:
         condition: on-failure
       placement:
