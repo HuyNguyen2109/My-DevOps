@@ -49,6 +49,12 @@ services:
         gitlab_rails['object_store']['objects']['terraform_state']['bucket'] = 'gitlab-terraform-state'
         gitlab_rails['object_store']['objects']['ci_secure_files']['bucket'] = 'gitlab-ci-secure-files'
         gitlab_rails['object_store']['objects']['pages']['bucket'] = 'gitlab-pages'
+
+        # log level
+        gitlab_kas['log_level'] = 'error'
+        patroni['log_level'] = 'ERROR'
+        registry['log_level'] = "error"
+        gitlab_shell['log_level'] = 'ERROR'
     ports:
       - "2224:22"
     volumes:
