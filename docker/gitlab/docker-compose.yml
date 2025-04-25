@@ -20,6 +20,7 @@ services:
               { 'host' => 'redis-sentinel-2', 'port' => 26379 },
               { 'host' => 'redis-sentinel-3', 'port' => 26379 }
             ]
+            gitlab_rails['redis_master_name'] = 'redis-master'
             gitlab_rails['db_adapter'] = "postgresql"
             gitlab_rails['db_database'] = "gitlabhq_production"
             gitlab_rails['db_username'] = "gitlab_admin"
