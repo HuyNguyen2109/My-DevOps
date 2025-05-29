@@ -1,0 +1,16 @@
+ports:
+  web:
+    redirections:
+      entryPoint:
+        to: websecure
+        scheme: https
+  websecure:
+    port: 443
+
+nodeSelector:
+  node-role.kubernetes.io/control-plane: "true"
+
+tolerations:
+- key: "CriticalAddonsOnly"
+  value: "true"
+  effect: "NoExecute"

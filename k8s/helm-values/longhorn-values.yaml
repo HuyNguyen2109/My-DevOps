@@ -1,0 +1,39 @@
+service:
+  ui:
+    type: LoadBalancer
+  manager:
+    type: ClusterIP
+longhornUI:
+  replicas: 3
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 1
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                    - longhorn-ui
+            topologyKey: kubernetes.io/hostname
+  tolerations:
+  - key: "CriticalAddonsOnly"
+    value: "true"
+    effect: "NoExecute"
+  - key: "node-role.kubernetes.io/control-plane"
+    operator: "Exists"
+    effect: "NoSchedule"
+  nodeSelector:
+    node.cert-manager: "true"
+defaultSettings:
+  defaultDataPath: "/var/lib/longhorn"
+enablePSP: false
+
+persistence:
+  defaultClassReplicaCount: 2
+
+defaultBackupStore:
+  backupTarget: "s3://longhorn-backup@ap-south-asia-homelab-1/"
+  backupTargetCredentialSecret: "minio-secret-eso"
+

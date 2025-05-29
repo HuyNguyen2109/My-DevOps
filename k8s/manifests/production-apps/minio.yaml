@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+  namespace: production-external-apps
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9769
+      targetPort: 9769
+      protocol: TCP
+  selector: {}
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: minio
+  namespace: production-external-apps
+subsets:
+  - addresses:
+      - ip: 192.168.1.250  # Replace with Proxmox IP
+    ports:
+      - port: 9769
+
+

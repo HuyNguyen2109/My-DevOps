@@ -1,0 +1,25 @@
+adminUser:
+  organization: "default"
+  bucket: "default"
+  user: "admin"
+  password: ""
+
+persistence:
+  enabled: true
+  useExisting: true
+  name: "influxdb-influxdb2-smaller"
+  storageClass: longhorn
+  accessMode: ReadWriteOnce
+  size: 10Gi
+  mountPath: /var/lib/influxdb2
+
+service:
+  type: LoadBalancer
+  port: 8086
+  targetPort: 8086
+
+ingress:
+  enabled: true
+  tls: true
+  className: traefik
+  hostname: influxdb.mcb-svc.work

@@ -1,0 +1,43 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: external-apps
+  namespace: production-external-apps
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`proxmox.mcb-svc.work`)
+      kind: Rule
+      middlewares:
+        - name: proxmox-headers
+          namespace: production-external-apps
+      services:
+        - name: proxmox
+          port: 8006
+          scheme: https
+          passHostHeader: true
+          serversTransport: proxmox-insecure
+    - match: Host(`unraid.mcb-svc.work`)
+      kind: Rule
+      middlewares:
+        - name: unraid-headers
+          namespace: production-external-apps
+      services:
+        - name: unraid
+          port: 8443
+          scheme: https
+          passHostHeader: true
+          serversTransport: unraid-insecure
+    - match: Host(`bucket.mcb-svc.work`)
+      kind: Rule
+      services:
+        - name: minio
+          port: 9769
+    - match: Host(`bucket-api.mcb-svc.work`)
+      kind: Rule
+      services:
+        - name: minio-api
+          port: 9768
+  tls:
+    secretName: production-external-app-cert-tls

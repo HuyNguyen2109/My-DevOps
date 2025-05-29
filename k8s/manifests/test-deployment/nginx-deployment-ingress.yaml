@@ -1,0 +1,82 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: testing-deployment-2
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  namespace: testing-deployment-2
+  labels:
+    app: nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: bitnami/nginx:latest
+        ports:
+        - containerPort: 80
+        securityContext:
+          seccompProfile:
+            type: RuntimeDefault
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - "ALL"
+          runAsNonRoot: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+  namespace: testing-deployment-2
+spec:
+  selector:
+    app: nginx
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: cloudflare-wildcard-cert-nginx
+  namespace: testing-deployment-2
+spec:
+  secretName: cloudflare-wildcard-cert-tls-nginx  # This is the TLS secret used in Ingress
+  issuerRef:
+    name: cloudflare-clusterissuer
+    kind: ClusterIssuer
+  commonName: "*.mcb-svc.work"
+  dnsNames:
+  - "*.mcb-svc.work"
+  duration: 2160h # 90 days
+  renewBefore: 360h # 15 days before expiry
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: nginx-ingressroute
+  namespace: testing-deployment-2
+spec:
+  entryPoints:
+  - websecure
+  routes:
+  - match: Host(`nginx.mcb-svc.work`) && PathPrefix(`/`)
+    kind: Rule
+    services:
+    - name: nginx-service
+      port: 80
+  tls:
+    secretName: cloudflare-wildcard-cert-tls-nginx
+
