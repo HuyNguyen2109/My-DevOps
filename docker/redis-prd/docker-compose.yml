@@ -95,7 +95,7 @@ services:
       - REDIS_SENTINEL_QUORUM=2
       - REDIS_SENTINEL_ANNOUNCE_IP=redis-sentinel-1
       - REDIS_SENTINEL_ANNOUNCE_PORT=26379
-      - REDIS_MASTER_HOST=tasks.redis-master
+      - REDIS_MASTER_HOST=redis-master
     depends_on:
       - redis-master
     networks:
@@ -109,7 +109,7 @@ services:
       - REDIS_SENTINEL_QUORUM=2
       - REDIS_SENTINEL_ANNOUNCE_IP=redis-sentinel-2
       - REDIS_SENTINEL_ANNOUNCE_PORT=26379
-      - REDIS_MASTER_HOST=tasks.redis-master
+      - REDIS_MASTER_HOST=redis-master
     depends_on:
       - redis-master
     networks:
@@ -123,7 +123,7 @@ services:
       - REDIS_SENTINEL_QUORUM=2
       - REDIS_SENTINEL_ANNOUNCE_IP=redis-sentinel-3
       - REDIS_SENTINEL_ANNOUNCE_PORT=26379
-      - REDIS_MASTER_HOST=tasks.redis-master
+      - REDIS_MASTER_HOST=redis-master
     depends_on:
       - redis-master
     networks:

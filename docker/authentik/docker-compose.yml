@@ -24,7 +24,7 @@ services:
     image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2025.2.2}
     command: server
     environment:
-      AUTHENTIK_REDIS__HOST: tasks.haproxy-redis
+      AUTHENTIK_REDIS__HOST: haproxy-redis
       AUTHENTIK_POSTGRESQL__HOST: postgresql-master
       AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
       AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
@@ -34,6 +34,7 @@ services:
       AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__NAME: ${PG_DB:-authentik}
       AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__USER: ${PG_USER:-authentik}
       AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PASSWORD: ${PG_PASS}
+      AUTHENTIK_LOG_LEVEL: error
     volumes:
       - authentik-server-media:/media
       - authentik-server-templates:/templates
@@ -67,7 +68,7 @@ services:
     image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2025.2.2}
     command: worker
     environment:
-      AUTHENTIK_REDIS__HOST: tasks.haproxy-redis
+      AUTHENTIK_REDIS__HOST: haproxy-redis
       AUTHENTIK_POSTGRESQL__HOST: postgresql-master
       AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
       AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
@@ -77,6 +78,7 @@ services:
       AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__NAME: ${PG_DB:-authentik}
       AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__USER: ${PG_USER:-authentik}
       AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PASSWORD: ${PG_PASS}
+      AUTHENTIK_LOG_LEVEL: error
     user: root
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
