@@ -1,13 +1,9 @@
-include:
-  - template: Auto-DevOps.gitlab-ci.yml
-
 stages:
   - deploy
 
-# Disable AutoDevOps build stage
-build:
-  rules:
-    - when: never
+variables:
+  AUTO_DEVOPS_BUILD_IMAGE_CNB_ENABLED: "false"
+
 
 deploy:
   stage: deploy
