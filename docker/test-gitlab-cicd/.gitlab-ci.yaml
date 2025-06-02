@@ -1,9 +1,6 @@
 stages:
   - deploy
 
-variables:
-  CNB_BUILDER: "docker.io/heroku/builder:24"
-
 deploy:
   stage: deploy
   image: alpine:latest
