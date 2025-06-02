@@ -1,16 +1,16 @@
 services:
   web:
-    image: "zengxs/gitlab:ce"
-    command: ["bash", "-c", "gitlab-ctl reconfigure && gitlab-ctl tail"]
+    image: "gitlab/gitlab-ce:nightly"
+    #command: ["bash", "-c", "gitlab-ctl reconfigure && gitlab-ctl tail"]
     networks:
       - traefik-internetwork
       - db-internetwork
     environment:
       BASE_URL: ${BASE_URL}
       GITLAB_ADMIN_DB_PASSWORD: ${GITLAB_ADMIN_DB_PASSWORD}
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
-      MINIO_URL: ${MINIO_URL}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      S3_URL: ${S3_URL}
       GITLAB_OMNIBUS_CONFIG: |
         external_url "https://#{ENV['BASE_URL']}"
         gitlab_rails['gitlab_default_color_mode'] = 3
@@ -31,10 +31,10 @@ services:
         gitlab_rails['object_store']['proxy_download'] = false
         gitlab_rails['object_store']['connection'] = {
           'provider' => 'AWS',
-          'aws_access_key_id' => ENV['MINIO_ACCESS_KEY'],
-          'aws_secret_access_key' => ENV['MINIO_SECRET_KEY'],
+          'aws_access_key_id' => ENV['S3_ACCESS_KEY'],
+          'aws_secret_access_key' => ENV['S3_SECRET_KEY'],
           'region' => 'us-east-1', # can be anything, MinIO ignores it
-          'endpoint' => ENV['MINIO_URL'], # replace with your MinIO service URL
+          'endpoint' => ENV['S3_URL'], # replace with your MinIO service URL
           'path_style' => true # critical for MinIO!
         }
 
