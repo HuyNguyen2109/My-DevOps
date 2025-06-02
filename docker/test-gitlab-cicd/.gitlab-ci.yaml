@@ -1,6 +1,9 @@
 stages:
   - deploy
 
+variables:
+  AUTO_DEVOPS_BUILD_IMAGE_CNB_BUILDER: heroku/buildpacks:24
+
 deploy:
   stage: deploy
   image: alpine:latest
