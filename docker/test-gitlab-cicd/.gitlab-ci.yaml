@@ -5,7 +5,7 @@ stages:
   - deploy
 
 variables:
-  CNB_BUILDER: heroku/builder:24
+  CNB_BUILDER_IMAGE: heroku/builder:24
 
 deploy:
   stage: deploy
