@@ -3,7 +3,7 @@ stages:
 
 deploy:
   stage: deploy
-  image: alpine:latest
+  image: ubuntu:24.04
   before_script:
     - apk add --no-cache openssh-client
     - eval $(ssh-agent -s)
