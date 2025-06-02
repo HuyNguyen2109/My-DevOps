@@ -1,10 +1,6 @@
 stages:
   - deploy
 
-variables:
-  AUTO_DEVOPS_BUILD_IMAGE_CNB_ENABLED: "false"
-
-
 deploy:
   stage: deploy
   image: alpine:latest
