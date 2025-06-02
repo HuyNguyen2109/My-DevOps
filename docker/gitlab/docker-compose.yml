@@ -93,6 +93,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./config.toml:/etc/gitlab-runner/config.toml
+      - ./.runner_system_id:/etc/gitlab-runner/.runner_system_id
       - /lib/modules:/lib/modules
     deploy:
       mode: replicated
