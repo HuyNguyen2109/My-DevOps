@@ -92,12 +92,10 @@ services:
       - traefik-internetwork
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./config.toml:/etc/gitlab-runner/config.toml
     deploy:
       mode: replicated
-      replicas: 2
-    configs:
-      - source: gitlab-runners.toml
-        target: /etc/gitlab-runner/config.toml
+      replicas: 1
 
 configs:
   gitlab-runners.toml:
