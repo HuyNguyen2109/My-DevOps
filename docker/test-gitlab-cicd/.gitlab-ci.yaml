@@ -5,7 +5,7 @@ stages:
   - deploy
 
 variables:
-  AUTO_DEVOPS_BUILD_IMAGE_CNB_BUILDER: heroku/buildpacks:24
+  CNB_BUILDER: heroku/builder:24
 
 deploy:
   stage: deploy
