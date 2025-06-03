@@ -54,14 +54,16 @@ services:
     volumes:
       - alertmanager_config:/etc/alertmanager
       - alertmanager_data:/alertmanager
-      - ./config/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    configs:
+      - source: alertmanager-conf
+        target: /etc/alertmanager/alertmanager.yml
 
 secrets:
   ntfy_token:
     external: true
 
 configs:
-  alertmanager_prd:
+  alertmanager-conf:
     external: true
 
 volumes:
