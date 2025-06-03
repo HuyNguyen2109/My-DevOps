@@ -23,6 +23,10 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - /etc/localtime:/etc/localtime
       - portainer-data:/data
+    ports:
+      - published: 9000
+        target: 9000
+        mode: host
     deploy:
       restart_policy:
         condition: any
