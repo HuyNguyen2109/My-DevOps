@@ -131,8 +131,9 @@ services:
 
   haproxy-redis:
     image: haproxy:latest
-    volumes:
-      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    configs:
+      - source: redis-haproxy-config
+        target: /usr/local/etc/haproxy/haproxy.cfg
     ports:
       - "6379:6379"
     depends_on:
@@ -141,6 +142,10 @@ services:
       - redis-sentinel-3
     networks:
       - db-internetwork
+
+configs:
+  redis-haproxy-config:
+    external: true
 
 volumes:
   redis-prod-01:

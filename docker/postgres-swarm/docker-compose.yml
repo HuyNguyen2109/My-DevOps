@@ -13,7 +13,9 @@ services:
       - postgres-root-password
     volumes:
       - postgres-prod-master:/bitnami/postgresql
-      - ./config:/bitnami/postgresql/conf/conf.d/
+    configs:
+      - source: postgres-extended-conf
+        target: /bitnami/postgresql/conf/conf.d/extened.conf
     networks:
       - db-internetwork
     deploy:
@@ -53,7 +55,9 @@ services:
       #- 5433:5432
     volumes:
       - postgres-prod-slave:/bitnami/postgresql
-      - ./config:/bitnami/postgresql/conf/conf.d/
+    configs:
+      - source: postgres-extended-conf
+        target: /bitnami/postgresql/conf/conf.d/extened.conf
     networks:
       - db-internetwork
     depends_on:
@@ -127,6 +131,10 @@ networks:
 
 secrets:
   postgres-root-password:
+    external: true
+
+configs:
+  postgres-extended-conf:
     external: true
 
 volumes:
