@@ -41,7 +41,7 @@ services:
         mode: host
     deploy:
       mode: replicated
-      replicas: 3
+      replicas: 1
       restart_policy:
         condition: any
         delay: 5s
