@@ -1,0 +1,52 @@
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: production-pool
+  namespace: metallb-system
+spec:
+  addresses:
+  - 192.168.1.21-192.168.1.40
+  autoAssign: true
+  avoidBuggyIPs: true
+---
+apiVersion: metallb.io/v1beta1
+kind: BGPPeer
+metadata:
+  name: frr-peer-draytek
+  namespace: metallb-system
+spec:
+  peerAddress: 192.168.1.1
+  peerASN: 64512
+  myASN: 64513
+  bfdProfile: homelab-bfd-1
+  ebgpMultiHop: true
+  holdTime: 90s
+  keepaliveTime: 30s
+---
+apiVersion: metallb.io/v1beta1
+kind: BGPAdvertisement
+metadata:
+  name: metallb-bgp-advertisement
+  namespace: metallb-system
+spec: 
+  ipAddressPools:
+  - production-pool
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: hybrid-l2-bgp-advertisement
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+  - production-pool
+---
+apiVersion: metallb.io/v1beta1
+kind: BFDProfile
+metadata:
+  name: homelab-bfd-1
+  namespace: metallb-system
+spec:
+  receiveInterval: 380
+  transmitInterval: 270
+  detectMultiplier: 3

@@ -1,0 +1,26 @@
+services:
+  app:
+    image: nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+      labels:
+        # Frontend
+        - "traefik.enable=true"
+        - "traefik.http.routers.test-cicd.rule=Host(`${ROOT_DOMAIN}`) && PathPrefix(`/cicd`)"
+        - "traefik.http.routers.test-cicd.entrypoints=websecure"
+        - "traefik.http.routers.test-cicd.tls.certresolver=letsencrypt"
+        - "traefik.http.services.test-cicd.loadbalancer.server.port=80"
+    networks:
+      - traefik-internetwork
+
+networks:
+  traefik-internetwork:
+    external: true
+
+configs:
+  proxy_config_prd:
+    external: true

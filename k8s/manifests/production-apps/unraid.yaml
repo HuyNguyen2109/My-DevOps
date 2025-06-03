@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: unraid
+  namespace: production-external-apps
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8443
+      targetPort: 8443
+      protocol: TCP
+  selector: {}
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: unraid
+  namespace: production-external-apps
+subsets:
+  - addresses:
+      - ip: 192.168.1.250  # Replace with Proxmox IP
+    ports:
+      - port: 8443
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: unraid-headers
+  namespace: production-external-apps
+spec:
+  headers:
+    sslProxyHeaders:
+      X-Forwarded-Proto: "https"
+    customRequestHeaders:
+      X-Forwarded-For: "true"
+---
+apiVersion: traefik.io/v1alpha1
+kind: ServersTransport
+metadata:
+  name: unraid-insecure
+  namespace: production-external-apps
+spec:
+  insecureSkipVerify: true
+
+

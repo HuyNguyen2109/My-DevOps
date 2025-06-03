@@ -1,0 +1,44 @@
+services:
+  prometheus_proxy:
+    image: nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+      labels:
+        # Frontend
+        - "traefik.enable=true"
+        - "traefik.http.routers.prometheus.rule=Host(`prometheus.${ROOT_DOMAIN}`)"
+        - "traefik.http.routers.prometheus.entrypoints=websecure"
+        - "traefik.http.routers.prometheus.tls.certresolver=letsencrypt"
+        - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+    networks:
+      - traefik-internetwork
+
+  vault_proxy:
+    image: nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+      labels:
+        # Frontend
+        - "traefik.enable=true"
+        - "traefik.http.routers.vault.rule=Host(`vault.${ROOT_DOMAIN}`)"
+        - "traefik.http.routers.vault.entrypoints=websecure"
+        - "traefik.http.routers.vault.tls.certresolver=letsencrypt"
+        - "traefik.http.services.vault.loadbalancer.server.port=8200"
+    networks:
+      - traefik-internetwork
+
+networks:
+  traefik-internetwork:
+    external: true
+
+configs:
+  proxy_config_prd:
+    external: true

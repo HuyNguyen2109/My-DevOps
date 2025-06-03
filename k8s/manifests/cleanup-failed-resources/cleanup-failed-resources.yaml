@@ -1,0 +1,63 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cleanup-sa
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cleanup-evicted-failed-pods
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cleanup-evicted-failed-pods-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cleanup-evicted-failed-pods
+subjects:
+- kind: ServiceAccount
+  name: cleanup-sa
+  namespace: kube-system
+---
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cleanup-evicted-failed-pods
+  namespace: kube-system
+spec:
+  schedule: "0 * * * *"  # every hour
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: cleanup-sa
+          containers:
+          - name: kubectl
+            image: bitnami/kubectl:latest
+            command:
+            - /bin/sh
+            - -c
+            - |
+              # Delete Failed Pods
+              kubectl get pods --all-namespaces --field-selector=status.phase=Failed -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name --no-headers | while read ns name; do
+                echo "Deleting Failed pod $name in $ns"
+                kubectl delete pod $name -n $ns
+              done
+
+              # Delete Evicted Pods
+              kubectl get pods --all-namespaces --no-headers | grep Evicted | awk '{print $1, $2}' | while read ns name; do
+                echo "Deleting Evicted pod $name in $ns"
+                kubectl delete pod $name -n $ns
+              done
+          restartPolicy: OnFailure

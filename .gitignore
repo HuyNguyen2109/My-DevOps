@@ -1,2 +1,41 @@
 *.env
 .idea
+nginx.conf
+# Local Terraform state
+*.tfstate
+*.tfstate.*
+
+# Crash logs
+crash.log
+
+# Ignore override files (personal or environment-specific)
+*.tfvars
+*.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Terraform plan output
+*.tfplan
+
+# Sensitive files
+secrets.auto.tfvars
+*.pem
+*.key
+*.crt
+*.kubeconfig
+id_rsa
+id_rsa.pub
+
+# Local working dir
+.terraform/
+.terraform.lock.hcl
+
+# Ignore VSCode and IDE configs
+.vscode/
+.idea/
+.DS_Store
+
+# Optional: OS-specific files
+Thumbs.db

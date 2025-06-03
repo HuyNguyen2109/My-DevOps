@@ -1,0 +1,23 @@
+services:
+  gitlab-runner:
+    image: gitlab/gitlab-runner:alpine
+    networks:
+      - traefik-internetwork
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./config.toml:/etc/gitlab-runner/config.toml
+      - ./.runner_system_id:/etc/gitlab-runner/.runner_system_id
+      - /lib/modules:/lib/modules
+    deploy:
+      mode: replicated
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+        failure_action: rollback
+
+networks:
+  traefik-internetwork:
+      external: true
+  db-internetwork:
+      external: true

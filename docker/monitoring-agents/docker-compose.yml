@@ -1,0 +1,37 @@
+services:
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    deploy:
+      mode: global  # Runs on every node
+      restart_policy:
+        condition: any
+    labels:
+      prometheus-job: "cadvisor"
+    ports:
+      - target: 8080
+        published: 8080
+        mode: host  # Exposes directly on the host network
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "/:/rootfs:ro"
+      - "/var/run:/var/run"
+      - "/sys:/sys:ro"
+      - "/var/lib/docker:/var/lib/docker:ro"
+    command: ["-docker_only"]
+  
+  node_exporter:
+    image: quay.io/prometheus/node-exporter:latest
+    command:
+      - '--path.rootfs=/host'
+    deploy:
+      mode: global
+      restart_policy:
+        condition: any
+      labels:
+        prometheus-job: "node-exporter"
+    ports:
+      - target: 9100
+        published: 9100
+        mode: host
+    volumes:
+      - '/:/host:ro,rslave'

@@ -1,0 +1,53 @@
+ports:
+  web:
+    redirection:
+      entryPoint:
+        to: websecure
+
+ingressClass:
+  enabled: true
+  isDefaultClass: true
+  name: traefik
+
+ingressRoute:
+  dashboard:
+    enabled: true
+    matchRule: PathPrefix(`/dashboard`) || PathPrefix(`/api`)
+  healthcheck:
+    enabled: true
+
+deployment:
+  enabled: true
+  replicas: 3
+
+# podSecurityContext:
+#   seccompProfile:
+#     type: RuntimeDefault
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 1
+    maxSurge: 1
+
+affinity:
+ podAntiAffinity:
+   requiredDuringSchedulingIgnoredDuringExecution:
+     - labelSelector:
+         matchLabels:
+           app.kubernetes.io/name: '{{ template "traefik.name" . }}'
+           app.kubernetes.io/instance: '{{ .Release.Name }}-{{ include "traefik.namespace" . }}'
+       topologyKey: kubernetes.io/hostname
+
+nodeSelector:
+  node-role.kubernetes.io/control-plane: ""
+tolerations:
+- key: "node-role.kubernetes.io/control-plane"
+  operator: "Exists"
+  effect: "NoSchedule"
+- key: "node-role.kubernetes.io/unschedulable"
+  operator: "Exists"
+  effect: "NoSchedule"
