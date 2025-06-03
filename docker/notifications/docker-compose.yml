@@ -4,6 +4,10 @@ volumes:
   ntfy-cache:
     external: true
 
+configs:
+  ntfy-server-config:
+    external: true
+
 networks:
   traefik-internetwork:
     external: true
@@ -14,13 +18,15 @@ services:
     command:
       - serve
     environment:
-      - TZ=Asia/Ho_Chi_Minh    # optional: set desired timezone
+      - TZ=Asia/Ho_Chi_Minh
       - NTFY_UPSTREAM_ACCESS_TOKEN=${NTFY_ACCESS_TOKEN}
       - NTFY_BASE_URL=https://${BASE_URL}
     volumes:
       - ntfy-cache:/var/cache/ntfy
       - ntfy-data:/etc/ntfy
-      - ./config/server.yml:/etc/ntfy/server.yml
+    configs:
+      - source: ntfy-server-config
+        target: /etc/ntfy/server.yml
     deploy:
       mode: replicated
       replicas: 1
