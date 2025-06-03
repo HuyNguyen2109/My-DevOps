@@ -49,8 +49,11 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik-acme:/acme
       - traefik-logs:/logs
-      - ./config/middlewares.yaml:/etc/traefik/middlewares.yaml
-      - ./config/traefik.yaml:/etc/traefik/traefik.yaml
+    configs:
+      - source: traefik-middlewares
+        target: /etc/traefik/middlewares.yaml
+      - source: traefik-config
+        target: /etc/traefik/traefik.yaml
     environment:
       - CF_API_EMAIL=${CF_API_EMAIL}
       - CF_API_KEY=${CF_API_KEY}
@@ -83,6 +86,12 @@ volumes:
   traefik-acme:
     external: true
   traefik-logs:
+    external: true
+
+configs:
+  traefik-middlewares:
+    external: true
+  traefik-config:
     external: true
       
 networks:
