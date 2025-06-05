@@ -1,6 +1,5 @@
 *.env
 .idea
-nginx.conf
 # Local Terraform state
 *.tfstate
 *.tfstate.*
