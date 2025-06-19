@@ -1,8 +1,18 @@
 volumes:
   ntfy-data:
-    external: true
+    driver: local
+    # Mount the volume to the SeaweedFS mount point
+    driver_opts:
+      type: none
+      device: /mnt/seaweedfs/mount/ntfy/data
+      o: bind
   ntfy-cache:
-    external: true
+    driver: local
+    # Mount the volume to the SeaweedFS mount point
+    driver_opts:
+      type: none
+      device: /mnt/seaweedfs/mount/ntfy/cache
+      o: bind
 
 configs:
   ntfy-server-config:
@@ -29,6 +39,10 @@ services:
         target: /etc/ntfy/server.yml
     deploy:
       mode: replicated
+      placement:
+        constraints:
+          - node.platform.os == linux
+          - node.role == manager
       replicas: 1
       update_config:
         parallelism: 1

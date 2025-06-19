@@ -8,7 +8,11 @@ services:
       - 443:443
       - 8082:8082
     deploy:
-      mode: global
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
       resources:
         limits:
           cpus: "0.5"
@@ -23,9 +27,6 @@ services:
         max_failure_ratio: 0.5
       restart_policy:
         condition: any
-      placement:
-        constraints:
-          - node.role == manager
       labels:
         # Label for Shepherd service for autoupdate
         - "shepherd.enable=true"
@@ -84,9 +85,19 @@ services:
 
 volumes:
   traefik-acme:
-    external: true
+    driver: local
+    # Mount the volume to the SeaweedFS mount point
+    driver_opts:
+      type: none
+      device: /mnt/seaweedfs/mount/traefik/acme
+      o: bind
   traefik-logs:
-    external: true
+    driver: local
+    # Mount the volume to the SeaweedFS mount point
+    driver_opts:
+      type: none
+      device: /mnt/seaweedfs/mount/traefik/logs
+      o: bind
 
 configs:
   traefik-middlewares:

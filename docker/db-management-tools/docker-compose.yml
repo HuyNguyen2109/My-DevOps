@@ -1,0 +1,95 @@
+services:
+  # cloudbeaver:
+  #   image: dbeaver/cloudbeaver:ea
+  #   networks:
+  #     - db-internetwork
+  #     - traefik-internetwork
+  #   volumes:
+  #     - cloudbeaver:/opt/cloudbeaver/workspace
+  #   deploy:
+  #     mode: replicated
+  #     replicas: 1
+  #     placement:
+  #       constraints:
+  #         - node.role == manager
+  #     update_config:
+  #       parallelism: 1
+  #       delay: 5s
+  #       failure_action: rollback
+  #     restart_policy:
+  #       condition: any
+  #     resources:
+  #       limits:
+  #         cpus: "0.25"   
+  #         memory: "512M"  
+  #       reservations:
+  #         cpus: "0.125"
+  #         memory: "256M"
+  #     labels:
+  #       - "traefik.enable=true"
+  #       - "traefik.http.routers.cloudbeaver-app.entrypoints=web"
+  #       - "traefik.http.routers.cloudbeaver-app.rule=Host(`${GUI_URL}`)"
+  #       - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
+  #       - "traefik.http.routers.cloudbeaver-app.middlewares=https-redirect"
+  #       - "traefik.http.routers.cloudbeaver-app-secure.entrypoints=websecure"
+  #       - "traefik.http.routers.cloudbeaver-app-secure.rule=Host(`${GUI_URL}`)"
+  #       - "traefik.http.routers.cloudbeaver-app-secure.tls=true"
+  #       - "traefik.http.routers.cloudbeaver-app-secure.tls.certresolver=letsencrypt"
+  #       - "traefik.http.routers.cloudbeaver-app-secure.service=cloudbeaver"
+  #       - "traefik.http.services.cloudbeaver.loadbalancer.server.port=8978"
+
+  bytebase:
+    image: bytebase/bytebase:3.7.0
+    networks:
+      - db-internetwork
+      - traefik-internetwork
+    volumes:
+      - bytebase:/var/lib/bytebase
+    environment:
+      - PG_URL=${PG_URL}
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == worker
+      update_config:
+        parallelism: 1
+        delay: 5s
+        failure_action: rollback
+      restart_policy:
+        condition: any
+      resources:
+        limits:
+          cpus: "2"
+          memory: "4G"
+        reservations:
+          cpus: "0.25"
+          memory: "512M"
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.bytebase.entrypoints=websecure"
+        - "traefik.http.routers.bytebase.rule=Host(`${GUI_URL}`)"
+        - "traefik.http.routers.bytebase.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.bytebase.service=bytebase"
+        - "traefik.http.services.bytebase.loadbalancer.server.port=8080"
+
+volumes:
+  # cloudbeaver:
+  #   driver: local
+  #   driver_opts:
+  #     type: none
+  #     device: /mnt/seaweedfs/mount/cloudbeaver
+  #     o: bind
+  bytebase:
+    driver: local
+    driver_opts:
+      type: none
+      device: /mnt/seaweedfs/mount/bytebase
+      o: bind
+
+networks:
+  db-internetwork:
+    external: true
+  traefik-internetwork:
+    external: true

@@ -10,8 +10,6 @@ services:
       - REDIS_REPLICATION_MODE=master
     networks:
       - db-internetwork
-    volumes:
-      - redis-prod-01:/bitnami/redis/data
     deploy:
       update_config:
         parallelism: 1
@@ -20,7 +18,7 @@ services:
       replicas: 1
       resources:
         limits:  
-          memory: "2G"  
+          memory: "1G"  
         reservations:
           memory: "512M"
       restart_policy:
@@ -28,6 +26,7 @@ services:
       placement:
         constraints:
           - node.platform.os == linux
+          - node.role == manager
 
   redis-slave-1:
     image: bitnami/redis:latest
@@ -37,8 +36,6 @@ services:
       - REDIS_MASTER_HOST=redis-master
     depends_on:
       - redis-master
-    volumes:
-      - redis-prod-02:/bitnami/redis/data
     networks:
       - db-internetwork
     deploy:
@@ -57,6 +54,8 @@ services:
       placement:
         constraints:
           - node.platform.os == linux
+          - node.role == worker
+          - node.labels.database == master
 
   redis-slave-2:
     image: bitnami/redis:latest
@@ -68,8 +67,6 @@ services:
       - redis-master
     networks:
       - db-internetwork
-    volumes:
-      - redis-prod-03:/bitnami/redis/data
     deploy:
       update_config:
         parallelism: 1
@@ -86,6 +83,8 @@ services:
       placement:
         constraints:
           - node.platform.os == linux
+          - node.role == worker
+          - node.labels.database == slave
 
   redis-sentinel-1:
     image: bitnami/redis-sentinel:latest
@@ -100,6 +99,11 @@ services:
       - redis-master
     networks:
       - db-internetwork
+    deploy:
+      placement:
+        constraints:
+          - node.platform.os == linux
+          - node.role == manager
 
   redis-sentinel-2:
     image: bitnami/redis-sentinel:latest
@@ -114,6 +118,12 @@ services:
       - redis-master
     networks:
       - db-internetwork
+    deploy:
+      placement:
+        constraints:
+          - node.platform.os == linux
+          - node.role == worker
+          - node.labels.database == master
 
   redis-sentinel-3:
     image: bitnami/redis-sentinel:latest
@@ -128,6 +138,12 @@ services:
       - redis-master
     networks:
       - db-internetwork
+    deploy:
+      placement:
+        constraints:
+          - node.platform.os == linux
+          - node.role == worker
+          - node.labels.database == slave
 
   haproxy-redis:
     image: haproxy:latest
@@ -137,20 +153,20 @@ services:
     ports:
       - "6379:6379"
     depends_on:
+      - redis-master
+      - redis-slave-1
+      - redis-slave-2
       - redis-sentinel-1
       - redis-sentinel-2
       - redis-sentinel-3
     networks:
       - db-internetwork
+    deploy:
+      placement:
+        constraints:
+          - node.platform.os == linux
+          - node.role == manager
 
 configs:
   redis-haproxy-config:
-    external: true
-
-volumes:
-  redis-prod-01:
-    external: true
-  redis-prod-02:
-    external: true
-  redis-prod-03:
     external: true

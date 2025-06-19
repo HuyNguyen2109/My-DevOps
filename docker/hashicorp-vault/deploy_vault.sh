@@ -9,7 +9,7 @@ else
     exit 1
 fi
 # Define stack name (change this as needed)
-STACK_NAME="hcl-vault"
+STACK_NAME="hashicorp"
 # Deploy the stack
 docker stack deploy -c docker-compose.yml "$STACK_NAME"
 echo "✅ Docker stack '$STACK_NAME' deployed successfully!"

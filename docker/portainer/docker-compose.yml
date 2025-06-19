@@ -5,7 +5,7 @@ services:
       AGENT_CLUSTER_ADDR: tasks.agent
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /mnt/big-data/docker/container-data/volumes:/var/lib/docker/volumes
+      - /var/lib/docker/volumes:/var/lib/docker/volumes
     networks:
       - traefik-internetwork
     deploy:
@@ -55,7 +55,12 @@ services:
 
 volumes:
   portainer-data:
-    external: true
+    driver: local
+    # Mount the volume to the SeaweedFS mount point
+    driver_opts:
+      type: none
+      device: /mnt/seaweedfs/mount/portainer-data
+      o: bind
 
 networks:
   traefik-internetwork:

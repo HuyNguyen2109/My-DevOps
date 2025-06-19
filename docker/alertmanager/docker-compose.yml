@@ -20,6 +20,7 @@ services:
       placement:
         constraints:
           - node.platform.os == linux
+          - node.role == manager
       
   alertmanager:
     image: prom/alertmanager:latest
@@ -31,8 +32,6 @@ services:
       - '--cluster.gossip-interval=200ms'
       - '--cluster.pushpull-interval=1m'
       - '--web.external-url=http://alertmanager:9093'
-    secrets:
-      - ntfy_token
     networks:
       - traefik-internetwork
     ports:
@@ -51,6 +50,7 @@ services:
       placement:
         constraints:
           - node.platform.os == linux
+          - node.role == manager
     volumes:
       - alertmanager_config:/etc/alertmanager
       - alertmanager_data:/alertmanager
@@ -58,19 +58,25 @@ services:
       - source: alertmanager-conf
         target: /etc/alertmanager/alertmanager.yml
 
-secrets:
-  ntfy_token:
-    external: true
-
 configs:
   alertmanager-conf:
     external: true
 
 volumes:
   alertmanager_config:
-    external: true
+    driver: local
+    # Mount the volume to the SeaweedFS mount point
+    driver_opts:
+      type: none
+      device: /mnt/seaweedfs/mount/alertmanager/config
+      o: bind
   alertmanager_data:
-    external: true
+    driver: local
+    # Mount the volume to the SeaweedFS mount point
+    driver_opts:
+      type: none
+      device: /mnt/seaweedfs/mount/alertmanager/data
+      o: bind
 
 networks:
   traefik-internetwork:
