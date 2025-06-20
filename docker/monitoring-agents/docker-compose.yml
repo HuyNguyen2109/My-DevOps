@@ -80,6 +80,7 @@ services:
       - GF_AUTH_DISABLE_LOGIN_FORM=false
     networks:
       - traefik-internetwork
+      - monitoring-internetwork
     volumes:
       - grafana_storage:/var/lib/grafana
     deploy:
@@ -131,7 +132,7 @@ services:
         condition: any
       labels:
         traefik.enable: "true"
-        traefik.http.routers.uptime-kuma.rule: "Host(`uptime-kuma.${DOMAIN_NAME}`)"
+        traefik.http.routers.uptime-kuma.rule: "Host(`uptime.${DOMAIN_NAME}`)"
         traefik.http.routers.uptime-kuma.entrypoints: "websecure"
         traefik.http.routers.uptime-kuma.tls.certresolver: letsencrypt
         traefik.http.services.uptime-kuma.loadbalancer.server.port: "3001"

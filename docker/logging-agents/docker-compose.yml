@@ -1,0 +1,88 @@
+services:
+  loki:
+    image: grafana/loki:latest
+    volumes:
+      - loki-data:/loki
+    secrets:
+      - s3_access_key
+      - s3_secret_key
+      - s3_url
+      - s3_region
+    configs:
+      - source: loki-config
+        target: /etc/loki/loki-config.yml
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        export AWS_ACCESS_KEY_ID=$$(cat /run/secrets/s3_access_key);
+        export AWS_SECRET_ACCESS_KEY=$$(cat /run/secrets/s3_secret_key);
+        export AWS_REGION=$$(cat /run/secrets/s3_region);
+        export AWS_S3_ENDPOINT=$$(cat /run/secrets/s3_url);
+        exec /usr/bin/loki -config.file=/etc/loki/loki-config.yml -config.expand-env=true
+    networks:
+      - monitoring-internetwork
+    ports:
+      - target: 3100
+        published: 3100
+        protocol: tcp
+        mode: host
+      - target: 9096
+        published: 9096
+        protocol: tcp
+        mode: ingress
+    deploy:
+      endpoint_mode: vip
+      placement:
+        constraints:
+          - node.role == manager
+      mode: replicated
+      replicas: 1
+
+  promtail:
+    image: grafana/promtail:latest
+    volumes:
+      - /var/log:/var/log
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp:/tmp
+    configs:
+      - source: promtail-config
+        target: /etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - monitoring-internetwork
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.platform.os == linux
+
+networks:
+  traefik-internetwork:
+    external: true 
+  monitoring-internetwork:
+    external: true
+
+volumes:
+  loki-data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /mnt/seaweedfs/mount/loki
+      o: bind
+
+secrets:
+  s3_access_key:
+    external: true
+  s3_secret_key:
+    external: true
+  s3_url:
+    external: true
+  s3_region:
+    external: true
+
+configs:
+  loki-config:
+    external: true
+  promtail-config:    
+    external: true

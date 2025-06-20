@@ -162,6 +162,7 @@ services:
     networks:
       - db-internetwork
     deploy:
+      endpoint_mode: vip
       placement:
         constraints:
           - node.platform.os == linux
