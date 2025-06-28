@@ -56,11 +56,6 @@ services:
 volumes:
   portainer-data:
     driver: local
-    # Mount the volume to the SeaweedFS mount point
-    driver_opts:
-      type: none
-      device: /mnt/seaweedfs/mount/portainer-data
-      o: bind
 
 networks:
   traefik-internetwork:

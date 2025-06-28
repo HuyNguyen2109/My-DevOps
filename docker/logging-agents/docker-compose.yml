@@ -1,37 +1,26 @@
 services:
   loki:
-    image: grafana/loki:latest
+    image: grafana/loki:3.5.1
     volumes:
       - loki-data:/loki
-    secrets:
-      - s3_access_key
-      - s3_secret_key
-      - s3_url
-      - s3_region
     configs:
       - source: loki-config
         target: /etc/loki/loki-config.yml
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        export AWS_ACCESS_KEY_ID=$$(cat /run/secrets/s3_access_key);
-        export AWS_SECRET_ACCESS_KEY=$$(cat /run/secrets/s3_secret_key);
-        export AWS_REGION=$$(cat /run/secrets/s3_region);
-        export AWS_S3_ENDPOINT=$$(cat /run/secrets/s3_url);
-        exec /usr/bin/loki -config.file=/etc/loki/loki-config.yml -config.expand-env=true
+    command: -config.file=/etc/loki/loki-config.yml
     networks:
       - monitoring-internetwork
-    ports:
-      - target: 3100
-        published: 3100
-        protocol: tcp
-        mode: host
-      - target: 9096
-        published: 9096
-        protocol: tcp
-        mode: ingress
+    environment:
+      - AWS_SDK_USES3_UNSIGNED_PAYLOAD=true
+    # ports:
+    #   - target: 3100
+    #     published: 3100
+    #     protocol: tcp
+    #     mode: ingress
+    #   - target: 9096
+    #     published: 9096
+    #     protocol: tcp
+    #     mode: ingress
     deploy:
-      endpoint_mode: vip
       placement:
         constraints:
           - node.role == manager
@@ -66,23 +55,9 @@ networks:
 volumes:
   loki-data:
     driver: local
-    driver_opts:
-      type: none
-      device: /mnt/seaweedfs/mount/loki
-      o: bind
-
-secrets:
-  s3_access_key:
-    external: true
-  s3_secret_key:
-    external: true
-  s3_url:
-    external: true
-  s3_region:
-    external: true
 
 configs:
   loki-config:
-    external: true
+    file: ./config/loki-config.yaml
   promtail-config:    
-    external: true
+    file: ./config/promtail-config.yaml

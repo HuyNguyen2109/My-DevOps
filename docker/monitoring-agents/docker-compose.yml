@@ -121,6 +121,8 @@ services:
     image: louislam/uptime-kuma:latest
     networks:
       - traefik-internetwork
+      - monitoring-internetwork
+      - db-internetwork
     deploy:
       mode: replicated
       replicas: 1
@@ -163,4 +165,6 @@ networks:
   monitoring-internetwork:
     external: true
   traefik-internetwork:
+    external: true
+  db-internetwork:
     external: true

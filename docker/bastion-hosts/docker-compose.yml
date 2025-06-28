@@ -10,12 +10,11 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /var/lib/docker/volumes:/mnt/docker/volumes:rw
     deploy:
-      mode: replicated
-      replicas: 1
+      mode: global
       resources:
         limits:
           memory: "1G"
-          cpus: "0.5"
+          cpus: "0.75"
         reservations:
           memory: "128M"
           cpus: "0.25"
@@ -24,9 +23,6 @@ services:
         delay: 5s
         failure_action: rollback
         max_failure_ratio: 0.5
-      placement:
-        constraints:
-          - node.role == manager
 
 networks:
   traefik-internetwork:

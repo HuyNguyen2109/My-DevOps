@@ -1,14 +1,14 @@
 services:
   postgresql-master:
     image: 'bitnami/postgresql:16-debian-12'
-    ports:
-    # When using this type of exposing, make sure the host on port
-    # is behind specific Mesh/VPN network and using for internal only
-      - target: 5432
-        published: 5432
-        protocol: tcp
-        mode: host
-      #- 5432:5432
+    # ports:
+    # # When using this type of exposing, make sure the host on port
+    # # is behind specific Mesh/VPN network and using for internal only
+    #   - target: 5432
+    #     published: 5432
+    #     protocol: tcp
+    #     mode: host
+    #   #- 5432:5432
     secrets:
       - postgres-root-password
     volumes:
