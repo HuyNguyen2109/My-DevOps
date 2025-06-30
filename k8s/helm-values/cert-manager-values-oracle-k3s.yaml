@@ -12,3 +12,6 @@ tolerations:
   value: "true"
   operator: "Equal"
   effect: "NoExecute"
+- key: "node-role.kubernetes.io/control-plane"
+  operator: "Exists"
+  effect: "NoSchedule"
