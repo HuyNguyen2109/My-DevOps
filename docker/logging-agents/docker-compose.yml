@@ -58,6 +58,6 @@ volumes:
 
 configs:
   loki-config:
-    file: ./config/loki-config.yaml
+    external: true
   promtail-config:    
-    file: ./config/promtail-config.yaml
+    external: true

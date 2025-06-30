@@ -40,7 +40,7 @@ providers:
 certificatesResolvers:
   letsencrypt:
     acme:
-      email: "${CF_API_EMAIL}"  # Replace with your email
+      email: "JohnasHuy21091996@gmail.com"
       storage: "acme/acme.json"
       caServer: "https://acme-v02.api.letsencrypt.org/directory"
       dnsChallenge:
