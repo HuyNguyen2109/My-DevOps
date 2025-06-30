@@ -4,7 +4,6 @@ enable-metrics: true
 log-level: info
 log-format: json
 behind-proxy: true
-attachment-cache-dir: "/var/cache/ntfy/attachments"
 auth-file: "/var/cache/ntfy/user.db"
 auth-default-access: "deny-all"
 enable-login: true

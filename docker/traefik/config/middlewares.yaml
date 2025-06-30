@@ -5,7 +5,7 @@ http:
       #   users:
       #     - "${TRAEFIK_USER}:${TRAEFIK_PASSWORD}"
       forwardAuth:
-        address: http://authentik-server:9000/outpost.goauthentik.io/auth/traefik
+        address: http://server:9000/outpost.goauthentik.io/auth/traefik
         trustForwardHeader: true
         authResponseHeaders:
           - X-authentik-username

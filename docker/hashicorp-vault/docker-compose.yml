@@ -1,8 +1,7 @@
-version: '3.8'
-
 services:
   vault:
     image: hashicorp/vault:latest
+    command: server
     cap_add:
       - IPC_LOCK
     networks:
@@ -10,10 +9,11 @@ services:
     environment:
       - VAULT_ADDR=http://${VAULT_URL}
     configs:
-      - source: vault-config.hcl
+      - source: vault-config
         target: /vault/config/config.hcl
     volumes:
-      - vault_data:/vault/file
+      - vault-data:/vault/file
+      - vault-logs:/vault/logs
     deploy:
       mode: replicated
       replicas: 1
@@ -34,19 +34,30 @@ services:
       placement:
         constraints:
           - node.platform.os == linux
+          - node.role == worker
       labels:
         - "traefik.enable=true"
         - "traefik.http.routers.vault.rule=Host(`${VAULT_URL}`)"
         - "traefik.http.routers.vault.entrypoints=websecure"
         - "traefik.http.routers.vault.tls.certresolver=letsencrypt"
-        - "traefik.http.services.vault.loadbalancer.server.port=8202"
+        - "traefik.http.services.vault.loadbalancer.server.port=8200"
         - "traefik.http.services.vault.loadbalancer.server.scheme=http"
 configs:
-  vault-config.hcl:
+  vault-config:
     external: true
 volumes:
-  vault_data:
-    external: true
+  vault-data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /mnt/seaweedfs/mount/vault/data
+      o: bind
+  vault-logs:
+    driver: local
+    driver_opts:
+      type: none
+      device: /mnt/seaweedfs/mount/vault/logs
+      o: bind
 networks:
   traefik-internetwork:
     external: true

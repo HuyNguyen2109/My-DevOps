@@ -1,0 +1,63 @@
+services:
+  loki:
+    image: grafana/loki:3.5.1
+    volumes:
+      - loki-data:/loki
+    configs:
+      - source: loki-config
+        target: /etc/loki/loki-config.yml
+    command: -config.file=/etc/loki/loki-config.yml
+    networks:
+      - monitoring-internetwork
+    environment:
+      - AWS_SDK_USES3_UNSIGNED_PAYLOAD=true
+    # ports:
+    #   - target: 3100
+    #     published: 3100
+    #     protocol: tcp
+    #     mode: ingress
+    #   - target: 9096
+    #     published: 9096
+    #     protocol: tcp
+    #     mode: ingress
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+      mode: replicated
+      replicas: 1
+
+  promtail:
+    image: grafana/promtail:latest
+    volumes:
+      - /var/log:/var/log
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp:/tmp
+    configs:
+      - source: promtail-config
+        target: /etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - monitoring-internetwork
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.platform.os == linux
+
+networks:
+  traefik-internetwork:
+    external: true 
+  monitoring-internetwork:
+    external: true
+
+volumes:
+  loki-data:
+    driver: local
+
+configs:
+  loki-config:
+    external: true
+  promtail-config:    
+    external: true

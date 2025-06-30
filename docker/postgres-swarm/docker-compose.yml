@@ -1,19 +1,21 @@
 services:
   postgresql-master:
     image: 'bitnami/postgresql:16-debian-12'
-    ports:
-    # When using this type of exposing, make sure the host on port
-    # is behind specific Mesh/VPN network and using for internal only
-      - target: 5432
-        published: 5432
-        protocol: tcp
-        mode: host
-      #- 5432:5432
+    # ports:
+    # # When using this type of exposing, make sure the host on port
+    # # is behind specific Mesh/VPN network and using for internal only
+    #   - target: 5432
+    #     published: 5432
+    #     protocol: tcp
+    #     mode: host
+    #   #- 5432:5432
     secrets:
       - postgres-root-password
     volumes:
       - postgres-prod-master:/bitnami/postgresql
-      - ./config:/bitnami/postgresql/conf/conf.d/
+    configs:
+      - source: postgres-extended-conf
+        target: /bitnami/postgresql/conf/conf.d/extened.conf
     networks:
       - db-internetwork
     deploy:
@@ -34,7 +36,7 @@ services:
       replicas: 1
       placement:
         constraints:
-          - node.role == manager
+          - node.labels.database == master
     environment:
       - POSTGRESQL_REPLICATION_MODE=master
       - POSTGRESQL_REPLICATION_USER=${REPLICATION_USER}
@@ -53,12 +55,19 @@ services:
       #- 5433:5432
     volumes:
       - postgres-prod-slave:/bitnami/postgresql
-      - ./config:/bitnami/postgresql/conf/conf.d/
+    configs:
+      - source: postgres-extended-conf
+        target: /bitnami/postgresql/conf/conf.d/extened.conf
     networks:
       - db-internetwork
     depends_on:
       - postgresql-master
     deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.database == slave
       update_config:
         parallelism: 1
         delay: 5s
@@ -72,7 +81,6 @@ services:
         reservations:
           cpus: "0.125"
           memory: "512M"
-      mode: global
     secrets:
       - postgres-root-password
     environment:
@@ -82,42 +90,6 @@ services:
       - POSTGRESQL_MASTER_HOST=postgresql-master
       - POSTGRESQL_PASSWORD_FILE=/run/secrets/postgres-root-password
       - POSTGRESQL_MASTER_PORT_NUMBER=5432
-
-  cloudbeaver:
-    image: dbeaver/cloudbeaver:latest
-    networks:
-      - db-internetwork
-      - traefik-internetwork
-    volumes:
-      - cloudbeaver:/opt/cloudbeaver/workspace
-    deploy:
-      mode: replicated
-      replicas: 1
-      update_config:
-        parallelism: 1
-        delay: 5s
-        failure_action: rollback
-      restart_policy:
-        condition: any
-      resources:
-        limits:
-          cpus: "0.25"   
-          memory: "512M"  
-        reservations:
-          cpus: "0.125"
-          memory: "256M"
-      labels:
-        - "traefik.enable=true"
-        - "traefik.http.routers.cloudbeaver-app.entrypoints=web"
-        - "traefik.http.routers.cloudbeaver-app.rule=Host(`${GUI_URL}`)"
-        - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
-        - "traefik.http.routers.cloudbeaver-app.middlewares=https-redirect"
-        - "traefik.http.routers.cloudbeaver-app-secure.entrypoints=websecure"
-        - "traefik.http.routers.cloudbeaver-app-secure.rule=Host(`${GUI_URL}`)"
-        - "traefik.http.routers.cloudbeaver-app-secure.tls=true"
-        - "traefik.http.routers.cloudbeaver-app-secure.tls.certresolver=letsencrypt"
-        - "traefik.http.routers.cloudbeaver-app-secure.service=cloudbeaver"
-        - "traefik.http.services.cloudbeaver.loadbalancer.server.port=8978"
 
 networks:
   db-internetwork:
@@ -129,10 +101,12 @@ secrets:
   postgres-root-password:
     external: true
 
+configs:
+  postgres-extended-conf:
+    external: true
+
 volumes:
   postgres-prod-master:
-    external: true
+    driver: local
   postgres-prod-slave:
-    external: true
-  cloudbeaver:
-    external: true
+    driver: local
