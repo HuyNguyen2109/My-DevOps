@@ -18,7 +18,7 @@ metadata:
   namespace: production-external-apps
 subsets:
   - addresses:
-      - ip: 192.168.1.250  # Replace with Proxmox IP
+      - ip: 192.168.1.40  # Replace with Proxmox IP
     ports:
       - port: 8443
 ---
