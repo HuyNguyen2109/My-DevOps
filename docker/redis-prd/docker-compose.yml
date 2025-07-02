@@ -146,8 +146,6 @@ services:
     configs:
       - source: redis-haproxy-config
         target: /usr/local/etc/haproxy/haproxy.cfg
-    ports:
-      - "6379:6379"
     depends_on:
       - redis-master
       - redis-slave-1

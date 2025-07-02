@@ -3,6 +3,8 @@
 STACK_NAME="logging-agents"
 LOKI_CONFIG_FILE="loki-config"
 PROMTAIL_CONFIG_FILE="promtail-config"
+# === Remove existing Docker services if it exists ===
+docker stack rm "$STACK_NAME" >/dev/null 2>&1 || true
 # === Check if Azure CLI is installed ===
 echo "Checking az cli is installed..."
 if ! command -v az >/dev/null 2>&1; then
