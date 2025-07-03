@@ -32,7 +32,7 @@ services:
     image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2025.2.2}
     command: server
     environment:
-      AUTHENTIK_REDIS__HOST: haproxy-redis
+      AUTHENTIK_REDIS__HOST: valkey-server
       AUTHENTIK_POSTGRESQL__HOST: postgresql-master
       AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
       AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
@@ -82,7 +82,7 @@ services:
     image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2025.2.2}
     command: worker
     environment:
-      AUTHENTIK_REDIS__HOST: haproxy-redis
+      AUTHENTIK_REDIS__HOST: valkey-server
       AUTHENTIK_POSTGRESQL__HOST: postgresql-master
       AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
       AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}

@@ -1,0 +1,38 @@
+services:
+  valkey-server:
+    image: valkey/valkey:latest
+    # ports:
+    #   - "6379:6379"
+    volumes:
+      - valkey-data:/data
+    command: ["valkey-server", "/usr/local/etc/valkey/valkey.conf"]
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 2G
+        reservations:
+          cpus: '0.25'
+          memory: 512M
+    networks:
+      - db-internetwork
+    configs:
+      - source: valkey-config
+        target: /usr/local/etc/valkey/valkey.conf
+
+volumes:
+  valkey-data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /mnt/seaweedfs/mount/valkey-data
+      o: bind
+
+configs:
+  valkey-config:
+    external: true
+
+networks:
+  db-internetwork:
+    external: true
