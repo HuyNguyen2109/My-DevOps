@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: observation-pod
+spec:
+  selector:
+    matchLabels:
+      app: observation-pod
+  template:
+    metadata:
+      labels:
+        app: observation-pod
+    spec:
+      containers:
+        - name: busybox
+          image: curlimages/curl:latest
+          command: ["sleep", "3600"]
+      restartPolicy: Always
