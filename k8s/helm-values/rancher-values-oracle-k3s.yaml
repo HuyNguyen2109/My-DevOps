@@ -1,0 +1,39 @@
+rancherImageTag: v2.11.1
+ingress:
+  ingressClassName: traefik
+  enabled: true
+  extraAnnotations:
+    cert-manager.io/cluster-issuer: "cloudflare-clusterissuer"
+    traefik.ingress.kubernetes.io/router.entrypoints: "websecure"
+    traefik.ingress.kubernetes.io/router.tls: "true"
+  tls:
+    source: secret
+    secretName: tls-rancher
+
+hostname: rancher.mcb-svc.work
+bootstrapPassword: admin
+
+replicas: 1
+antiAffinity: preferred
+topologyKey: kubernetes.io/hostname
+
+extraNodeSelectorTerms:
+  - key: "node-role.kubernetes.io/worker"
+    operator: In
+    values:
+      - "true"
+
+postDelete:
+  timeout: 600
+  namespaceList:
+    - cattle-fleet-system
+    - cattle-system
+    - rancher-operator-system
+    - cattle-fleet-local-system
+    - catlle-fleet-cluster-system
+    - cattle-global-data
+    - cattle-global-nt
+    - cattle-impersonation-system
+    - cattle-provisioning-capi-system
+    - cattle-ui-plugin-system
+  ignoreTimeoutError: true
