@@ -8,6 +8,9 @@ services:
     command: ["valkey-server", "/usr/local/etc/valkey/valkey.conf"]
     deploy:
       replicas: 1
+      placement:
+        constraints:
+          - node.labels.database == slave
       resources:
         limits:
           cpus: '0.50'
@@ -24,10 +27,6 @@ services:
 volumes:
   valkey-data:
     driver: local
-    driver_opts:
-      type: none
-      device: /mnt/seaweedfs/mount/valkey-data
-      o: bind
 
 configs:
   valkey-config:
