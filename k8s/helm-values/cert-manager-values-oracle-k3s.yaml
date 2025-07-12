@@ -6,7 +6,7 @@ extraArgs:
   - --dns01-recursive-nameservers=1.1.1.1:53,1.0.0.1:53
 
 nodeSelector:
-  node-role.kubernetes.io/control-plane: "true"
+  beta.kubernetes.io/arch: "arm64"
 tolerations:
 - key: "CriticalAddonsOnly"
   value: "true"

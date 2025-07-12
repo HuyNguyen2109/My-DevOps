@@ -63,9 +63,6 @@ spec:
     spec:
       serviceAccountName: portainer-sa-clusteradmin
       tolerations:
-      - key: "node-role.kubernetes.io/control-plane"
-        operator: "Exists"
-        effect: "NoSchedule"
       - key: "CriticalAddonsOnly"
         value: "true"
         effect: "NoExecute"
