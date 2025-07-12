@@ -11,7 +11,7 @@ if ! command -v az >/dev/null 2>&1; then
     echo "❌ Azure CLI (az) is not installed. Please install it first: https://learn.microsoft.com/en-us/cli/azure/install-azure-cli"
     exit 1
 fi
-echo "Checking Azure credentials for Azure Key Vault..."
+echo "Checking Azure credentials for Azure Key Vault on host machine..."
 REQUIRED_VARS=(
   AZURE_CLIENT_ID
   AZURE_CLIENT_SECRET
@@ -105,14 +105,36 @@ scrape_configs:
     docker_sd_configs:
       - host: unix:///var/run/docker.sock
         refresh_interval: 5s
+    
+    pipeline_stages:
+      - docker: {}  # Parses Docker's JSON log structure
+      - labels:
+          swarm_service:
+          swarm_task:
+          swarm_task_id:
+          swarm_node:
+          container:
+          image:
 
     relabel_configs:
       - source_labels: [__meta_docker_container_label_com_docker_swarm_service_name]
         target_label: swarm_service
+
+      - source_labels: [__meta_docker_container_label_com_docker_swarm_task_name]
+        target_label: swarm_task
+
+      - source_labels: [__meta_docker_container_label_com_docker_swarm_task_id]
+        target_label: swarm_task_id
+
+      - source_labels: [__meta_docker_container_label_com_docker_swarm_node_id]
+        target_label: swarm_node
+
       - source_labels: [__meta_docker_container_name]
         target_label: container
+
       - source_labels: [__meta_docker_container_image]
         target_label: image
+
       - source_labels: [__address__]
         target_label: instance
 EOF
