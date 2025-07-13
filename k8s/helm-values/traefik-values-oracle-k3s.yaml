@@ -1,9 +1,17 @@
 additionalArguments:
   - "--entrypoints.portainer-agent.address=:9001"
+  - "--entrypoints.websecure.address=:9443"
   - "--providers.kubernetescrd"
   - "--providers.kubernetesingress"
 
 hostNetwork: true
+service:
+  enabled: true
+  type: NodePort
+
+deployment:
+  enabled: true
+  replicas: 1
 
 ports:
   traefik:
@@ -12,10 +20,6 @@ ports:
     port: 8083
     protocol: TCP
   web:
-    redirections:
-      entryPoint:
-        to: websecure
-        scheme: https
     port: 9080
   websecure:
     port: 9443
@@ -30,8 +34,6 @@ nodeSelector:
 
 tolerations:
 - key: "CriticalAddonsOnly"
+  operator: "Equal"
   value: "true"
   effect: "NoExecute"
-- key: "node-role.kubernetes.io/control-plane"
-  operator: "Exists"
-  effect: "NoSchedule"
