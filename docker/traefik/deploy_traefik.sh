@@ -25,6 +25,8 @@ api:
   dashboard: true
 
 entryPoints:
+  valkey-redis:
+    address: :6379
   metrics:
     address: :8082
   console:

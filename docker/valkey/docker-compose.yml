@@ -18,8 +18,14 @@ services:
         reservations:
           cpus: '0.25'
           memory: 512M
+      labels:
+        - "traefik.enable=true"
+        - "traefik.tcp.routers.valkey.rule=HostSNI(`*`)"
+        - "traefik.tcp.routers.valkey.entrypoints=valkey-redis"
+        - "traefik.tcp.services.valkey.loadbalancer.server.port=6379"
     networks:
       - db-internetwork
+      - traefik-internetwork
     configs:
       - source: valkey-config
         target: /usr/local/etc/valkey/valkey.conf
@@ -34,4 +40,6 @@ configs:
 
 networks:
   db-internetwork:
+    external: true
+  traefik-internetwork:
     external: true

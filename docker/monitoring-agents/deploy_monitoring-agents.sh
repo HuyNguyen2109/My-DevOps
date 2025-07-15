@@ -42,6 +42,7 @@ GRAFANA_ADMIN_PASSWORD=$(az keyvault secret show --vault-name "$AZURE_VAULT_NAME
 GRAFANA_DB_ADMIN_PASSWORD=$(az keyvault secret show --vault-name "$AZURE_VAULT_NAME" --name "grafana-db-admin-password" --query "value" -o tsv)
 GRAFANA_AUTHENTIK_CLIENT_ID=$(az keyvault secret show --vault-name "$AZURE_VAULT_NAME" --name "grafana-authentik-client-id" --query "value" -o tsv)
 GRAFANA_AUTHENTIK_CLIENT_SECRET=$(az keyvault secret show --vault-name "$AZURE_VAULT_NAME" --name "grafana-authentik-client-secret" --query "value" -o tsv)
+VALKEY_AUTH_PASSWORD=$(az keyvault secret show --vault-name "$AZURE_VAULT_NAME" --name "valkey-auth-password" --query "value" -o tsv)
 # === Create Docker Config via STDIN ===
 echo "Parsing all necessary variables into config..."
 
@@ -208,10 +209,10 @@ migration_locking = false
 
 [remote_cache]
 type = "redis"
-connstr = "addr=valkey-server:6379,db=0"
+connstr = "addr=valkey-server:6379,password=$VALKEY_AUTH_PASSWORD,db=0"
 
 [plugins]
-disable_plugins = "table"
+disable_plugins = ""
 
 [auth.generic_oauth]
 enabled = true
