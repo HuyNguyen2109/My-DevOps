@@ -1,6 +1,4 @@
 additionalArguments:
-  - "--entrypoints.portainer-agent.address=:9001"
-  - "--entrypoints.websecure.address=:9443"
   - "--providers.kubernetescrd"
   - "--providers.kubernetesingress"
 
