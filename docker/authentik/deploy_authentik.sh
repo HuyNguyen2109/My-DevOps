@@ -24,7 +24,7 @@ done
 echo "🔐 Fetching secrets from Vault..."
 export S3_ACCESS_KEY_ID=$(vault kv get -field=s3-client-id kubernetes/docker-secrets)
 export S3_SECRET_ACCESS_KEY=$(vault kv get -field=s3-client-secret kubernetes/docker-secrets)
-export S3_ENDPOINT=$(vault kv get -field=s3-endpoint kubernetes/docker-secrets)
+export S3_ENDPOINT="https://$(vault kv get -field=s3-endpoint kubernetes/docker-secrets)"
 export PG_PASS=$(vault kv get -field=authentik-db-password kubernetes/docker-secrets)
 export AUTHENTIK_SECRET_KEY=$(vault kv get -field=authentik-secret-key kubernetes/docker-secrets)
 export VALKEY_AUTH_PASSWORD=$(vault kv get -field=valkey-auth-password kubernetes/docker-secrets)
