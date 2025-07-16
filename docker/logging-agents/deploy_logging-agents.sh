@@ -5,30 +5,28 @@ LOKI_CONFIG_FILE="loki-config"
 PROMTAIL_CONFIG_FILE="promtail-config"
 # === Remove existing Docker services if it exists ===
 docker stack rm "$STACK_NAME" >/dev/null 2>&1 || true
-# === Check if Azure CLI is installed ===
-echo "Checking az cli is installed..."
-if ! command -v az >/dev/null 2>&1; then
-    echo "❌ Azure CLI (az) is not installed. Please install it first: https://learn.microsoft.com/en-us/cli/azure/install-azure-cli"
+# === Check if Vault CLI is installed ===
+echo "Checking vault cli is installed..."
+if ! command -v vault >/dev/null 2>&1; then
+    echo "❌ Vault CLI is not installed!"
     exit 1
 fi
-echo "Checking Azure credentials for Azure Key Vault on host machine..."
+echo "Checking Vault credentials for Vault..."
 REQUIRED_VARS=(
-  AZURE_CLIENT_ID
-  AZURE_CLIENT_SECRET
-  AZURE_TENANT_ID
-  AZURE_SUBSCRIPTION_ID
-  AZURE_VAULT_NAME
+  VAULT_ADDR
+  VAULT_TOKEN
 )
-
 for VAR in "${REQUIRED_VARS[@]}"; do
   if [ -z "${!VAR}" ]; then
     echo "❌ Environment variable '$VAR' is not set or is empty."
     exit 1
   fi
 done
-# === Get secrets from Azure Key Vault ===
-echo "🔐 Fetching secrets from Azure Key Vault..."
-S3_LOKI_BUCKET_URL=$(az keyvault secret show --vault-name "$AZURE_VAULT_NAME" --name "s3-loki-bucket" --query "value" -o tsv)
+# === Get secrets from Vault ===
+echo "🔐 Fetching secrets from Vault..."
+S3_CLIENT_ID=$(vault kv get -field=s3-client-id kubernetes/docker-secrets)
+S3_CLIENT_SECRET=$(vault kv get -field=s3-client-secret kubernetes/docker-secrets)
+S3_ENPOINT=$(vault kv get -field=s3-endpoint kubernetes/docker-secrets)
 # === Create Docker Config via STDIN ===
 echo "Parsing all necessary variables into config..."
 docker config rm $LOKI_CONFIG_FILE
@@ -75,7 +73,7 @@ storage_config:
     cache_location: /loki/index_cache
   
   aws:
-    s3: $S3_LOKI_BUCKET_URL
+    s3: s3://$S3_CLIENT_ID:$S3_CLIENT_SECRET@$S3_ENPOINT/loki-logs
     endpoint: https://32e21cb26175efbbdbd48a4ce2d76d39.r2.cloudflarestorage.com
     region: auto
     s3forcepathstyle: false

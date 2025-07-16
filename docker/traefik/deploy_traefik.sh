@@ -5,6 +5,30 @@ TRAEFIK_CONFIG_FILE="traefik-config"
 TRAEFIK_MIDDLEWARE_FILE="traefik-middlewares"
 # === Remove existing Docker services if it exists ===
 docker stack rm "$STACK_NAME" >/dev/null 2>&1 || true
+# === Check if Vault CLI is installed ===
+echo "Checking vault cli is installed..."
+if ! command -v vault >/dev/null 2>&1; then
+    echo "❌ Vault CLI is not installed!"
+    exit 1
+fi
+echo "Checking Vault credentials for Vault..."
+REQUIRED_VARS=(
+  VAULT_ADDR
+  VAULT_TOKEN
+)
+for VAR in "${REQUIRED_VARS[@]}"; do
+  if [ -z "${!VAR}" ]; then
+    echo "❌ Environment variable '$VAR' is not set or is empty."
+    exit 1
+  fi
+done
+# === Get secrets from Vault ===
+echo "🔐 Fetching secrets from Vault..."
+export CF_API_KEY=$(vault kv get -field=token kubernetes/cloudflare-api)
+export PUBLIC_IP=$(curl -s ifconfig.me)
+export ROOT_DOMAIN="mcb-svc.work"
+export TRAEFIK_URL="sg.mcb-svc.work"
+export IMAGE_TAG="v3.5.0-rc1"
 # === Create Docker Config via STDIN ===
 echo "Parsing all necessary variables into config..."
 docker config rm $TRAEFIK_CONFIG_FILE
@@ -95,15 +119,6 @@ http:
           - X-authentik-meta-app
           - X-authentik-meta-version
 EOF
-# Load environment variables from .env file
-if [ -f .env ]; then
-    set -a  # Automatically export all variables
-    source .env
-    set +a
-else
-    echo "⚠️  .env file not found! Make sure it exists in the current directory."
-    exit 1
-fi
 # Deploy the stack
 docker stack deploy -c docker-compose.yml "$STACK_NAME"
 echo "✅ Docker stack '$STACK_NAME' deployed successfully!"

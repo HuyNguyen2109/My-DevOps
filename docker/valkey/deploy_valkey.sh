@@ -4,30 +4,26 @@ STACK_NAME="valkey"
 VALKEY_CONFIG="valkey-config"
 # === Remove existing Docker services if it exists ===
 docker stack rm "$STACK_NAME" >/dev/null 2>&1 || true
-# === Check if Azure CLI is installed ===
-echo "Checking az cli is installed..."
-if ! command -v az >/dev/null 2>&1; then
-    echo "❌ Azure CLI (az) is not installed. Please install it first: https://learn.microsoft.com/en-us/cli/azure/install-azure-cli"
+# === Check if Vault CLI is installed ===
+echo "Checking vault cli is installed..."
+if ! command -v vault >/dev/null 2>&1; then
+    echo "❌ Vault CLI is not installed!"
     exit 1
 fi
-echo "Checking Azure credentials for Azure Key Vault on host machine..."
+echo "Checking Vault credentials for Vault..."
 REQUIRED_VARS=(
-  AZURE_CLIENT_ID
-  AZURE_CLIENT_SECRET
-  AZURE_TENANT_ID
-  AZURE_SUBSCRIPTION_ID
-  AZURE_VAULT_NAME
+  VAULT_ADDR
+  VAULT_TOKEN
 )
-
 for VAR in "${REQUIRED_VARS[@]}"; do
   if [ -z "${!VAR}" ]; then
     echo "❌ Environment variable '$VAR' is not set or is empty."
     exit 1
   fi
 done
-# === Get secrets from Azure Key Vault ===
-echo "🔐 Fetching secrets from Azure Key Vault..."
-VALKEY_AUTH_PASSWORD=$(az keyvault secret show --vault-name "$AZURE_VAULT_NAME" --name "valkey-auth-password" --query "value" -o tsv)
+# === Get secrets from Vault ===
+echo "🔐 Fetching secrets from Vault..."
+VALKEY_AUTH_PASSWORD=$(vault kv get -field=valkey-auth-password kubernetes/docker-secrets)
 # === Create Docker Config via STDIN ===
 echo "Parsing all necessary variables into config..."
 docker config rm $VALKEY_CONFIG >/dev/null 2>&1 || true
