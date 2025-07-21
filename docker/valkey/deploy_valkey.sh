@@ -60,5 +60,11 @@ loglevel notice
 
 EOF
 # Deploy the stack
-docker stack deploy -c docker-compose.yml "$STACK_NAME"
+docker stack deploy -c docker-compose.yml "$STACK_NAME" --detach=true
 echo "✅ Docker stack '$STACK_NAME' deployed successfully!"
+
+# Also trigger authentik instance re-deploy to apply new Valkey instance
+echo "Triggering authentik instance re-deploy..."
+cd ../authentik
+./deploy_authentik.sh
+cd ../valkey
