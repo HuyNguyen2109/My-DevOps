@@ -9,10 +9,10 @@ spec:
         elements:
           - cluster: on-cloud
             name: production-1
-            valuesFile: k8s/helm-values/traefik-values-oracle-k3s.yaml
+            valuesFile: k8s/traefik/values/traefik-values-oracle-k3s.yaml
           - cluster: homelab
             name: production-2
-            valuesFile: k8s/helm-values/traefik-values.yaml
+            valuesFile: k8s/traefik/values/traefik-values.yaml
   template:
     metadata:
       name: traefik-{{name}}

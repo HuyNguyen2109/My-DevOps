@@ -6,7 +6,7 @@ metadata:
 spec:
   destination:
     namespace: cattle-system
-    server: https://kubernetes.default.svc
+    name: on-cloud
   source:
     path: ''
     repoURL: https://releases.rancher.com/server-charts/stable
@@ -14,14 +14,14 @@ spec:
     chart: rancher
     helm:
       valueFiles:
-        - $values/k8s/helm-values/rancher-values-oracle-k3s.yaml
+        - $values/k8s/rancher/values/rancher-values-oracle-k3s.yaml
   sources:
     - repoURL: https://releases.rancher.com/server-charts/stable
       chart: rancher
       targetRevision: 2.11.3
       helm:
         valueFiles:
-          - $values/k8s/helm-values/rancher-values.yaml
+          - $values/k8s/rancher/values/rancher-values-oracle-k3s.yaml
     - repoURL: git@github.com:HuyNguyen2109/My-DevOps.git
       targetRevision: develop
       ref: values
