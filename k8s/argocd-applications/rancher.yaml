@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rancher
+  namespace: argocd-system
+spec:
+  destination:
+    namespace: cattle-system
+    server: https://kubernetes.default.svc
+  source:
+    path: ''
+    repoURL: https://releases.rancher.com/server-charts/stable
+    targetRevision: 2.11.3
+    chart: rancher
+    helm:
+      valueFiles:
+        - $values/k8s/helm-values/rancher-values-oracle-k3s.yaml
+  sources:
+    - repoURL: https://releases.rancher.com/server-charts/stable
+      chart: rancher
+      targetRevision: 2.11.3
+      helm:
+        valueFiles:
+          - $values/k8s/helm-values/rancher-values.yaml
+    - repoURL: git@github.com:HuyNguyen2109/My-DevOps.git
+      targetRevision: develop
+      ref: values
+  project: homelab
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
