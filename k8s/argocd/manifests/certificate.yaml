@@ -1,0 +1,15 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: argo-cert
+  namespace: argocd-system
+spec:
+  secretName: argo-server-tls  # This is the TLS secret used in Ingress
+  issuerRef:
+    name: cloudflare-clusterissuer
+    kind: ClusterIssuer
+  commonName: "argocd.mcb-svc.work"
+  dnsNames:
+  - "argocd.mcb-svc.work"
+  duration: 2160h # 90 days
+  renewBefore: 360h # 15 days before expiry

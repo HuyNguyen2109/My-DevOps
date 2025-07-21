@@ -37,4 +37,6 @@ tolerations:
   effect: "NoExecute"
   
 ingressClass:
+  enabled: true
+  isDefaultClass: true
   name: traefik
