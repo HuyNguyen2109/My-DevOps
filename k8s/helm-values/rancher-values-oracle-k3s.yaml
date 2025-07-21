@@ -1,4 +1,3 @@
-rancherImageTag: v2.11.1
 ingress:
   ingressClassName: traefik
   enabled: true
