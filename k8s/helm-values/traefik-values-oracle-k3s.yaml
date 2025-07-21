@@ -35,3 +35,6 @@ tolerations:
   operator: "Equal"
   value: "true"
   effect: "NoExecute"
+  
+ingressClass:
+  name: traefik
