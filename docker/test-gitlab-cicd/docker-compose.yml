@@ -10,7 +10,7 @@ services:
       labels:
         # Frontend
         - "traefik.enable=true"
-        - "traefik.http.routers.test-cicd.rule=Host(`${ROOT_DOMAIN}`) && PathPrefix(`/cicd`)"
+        - "traefik.http.routers.test-cicd.rule=Host(`sg.mcb-svc.work`) && PathPrefix(`/cicd`)"
         - "traefik.http.routers.test-cicd.entrypoints=websecure"
         - "traefik.http.routers.test-cicd.tls.certresolver=letsencrypt"
         - "traefik.http.services.test-cicd.loadbalancer.server.port=80"
