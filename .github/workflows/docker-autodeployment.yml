@@ -66,11 +66,14 @@ jobs:
           username: ${{ secrets.SWARM_USER }}
           key: ${{ secrets.SWARM_SSH_KEY }}
           script: |
-            cd /path/to/your/cloned/repo
-            git pull origin main
-            script="docker/${{ matrix.service }}/deploy_${{ matrix.service }}.sh"
+            cd /mnt/git/My-DevOps
+            git pull origin ${{ github.ref_name }}
+            cd docker/${{ matrix.service }}
+            script="${{ matrix.service }}/deploy_${{ matrix.service }}.sh"
             if [ -f "$script" ]; then
               bash "$script"
             else
               echo "No deploy script found for ${{ matrix.service }}"
+              echo "Using default deploy script."
+              docker stack deploy -c docker-compose.yml ${{ matrix.service }}
             fi
