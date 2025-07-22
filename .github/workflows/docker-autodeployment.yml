@@ -1,0 +1,51 @@
+name: Trigger Deploy Scripts Only for Changed Services
+
+on:
+  push:
+    paths:
+      - 'docker/**'
+  pull_request:
+    paths:
+      - 'docker/**'
+
+jobs:
+  filter:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.filter.outputs.changed }}
+      matrix: ${{ steps.filter.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            alertmanager: 'docker/alertmanager/**'
+            authentik: 'docker/authentik/**'
+            bation-hosts: 'docker/bastion-hosts/**'
+            
+
+  deploy:
+    needs: filter
+    if: needs.filter.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: ${{ fromJson(needs.filter.outputs.matrix) }}
+    steps:
+      - name: Run deploy script on Swarm manager
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SWARM_HOST }}
+          username: ${{ secrets.SWARM_USER }}
+          key: ${{ secrets.SWARM_SSH_KEY }}
+          script: |
+            cd /path/to/your/cloned/repo
+            git pull origin main
+            script="docker/${{ matrix.service }}/deploy_${{ matrix.service }}.sh"
+            if [ -f "$script" ]; then
+              bash "$script"
+            else
+              echo "No deploy script found for ${{ matrix.service }}"
+            fi
