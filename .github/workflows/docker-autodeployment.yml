@@ -69,7 +69,7 @@ jobs:
             cd /mnt/git/My-DevOps
             git pull origin ${{ github.ref_name }}
             cd docker/${{ matrix.service }}
-            script="${{ matrix.service }}/deploy_${{ matrix.service }}.sh"
+            script="deploy_${{ matrix.service }}.sh"
             if [ -f "$script" ]; then
               bash "$script"
             else
