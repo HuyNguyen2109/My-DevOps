@@ -36,3 +36,11 @@ postDelete:
     - cattle-provisioning-capi-system
     - cattle-ui-plugin-system
   ignoreTimeoutError: true
+
+resources:
+  requests:
+    memory: "1Gi"
+    cpu: "500m"
+  limits:
+    memory: "2Gi"
+    cpu: "1"
