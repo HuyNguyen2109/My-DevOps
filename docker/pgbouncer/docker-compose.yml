@@ -1,0 +1,57 @@
+services:
+  azure-connector:
+    image: bitnami/pgbouncer:latest
+    entrypoint: ["/bin/bash", "-c"]
+    command: >
+      "cp /mnt/pgbouncer.ini /opt/bitnami/pgbouncer/conf/pgbouncer.ini &&
+       cp /mnt/userlist.txt /opt/bitnami/pgbouncer/conf/userlist.txt &&
+       /opt/bitnami/pgbouncer/bin/pgbouncer /opt/bitnami/pgbouncer/conf/pgbouncer.ini"
+    configs:
+      - source: pgbouncer_ini
+        target: /mnt/pgbouncer.ini
+      - source: pgbouncer_userlist
+        target: /mnt/userlist.txt
+    secrets:
+      - source: cloudflare-cert
+        target: /opt/bitnami/pgbouncer/certs/cloudflare-cert.pem
+      - source: cloudflare-key
+        target: /opt/bitnami/pgbouncer/certs/cloudflare-key.pem
+      - source: cloudflare-ca-cert
+        target: /opt/bitnami/pgbouncer/certs/cloudflare-origin-ca.pem
+      - source: azure-root-ca
+        target: /opt/bitnami/pgbouncer/certs/azure-root-ca.pem
+    networks:
+      - traefik-internetwork
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      labels:
+        - traefik.enable=true
+
+        # Traefik TCP TLS passthrough config
+        - traefik.tcp.routers.pgbouncer.rule=HostSNI(`sg.mcb-svc.work`)
+        - traefik.tcp.routers.pgbouncer.entrypoints=pgbouncer
+        - traefik.tcp.routers.pgbouncer.service=pgbouncer-svc
+        - traefik.tcp.routers.pgbouncer.tls.passthrough=true
+        - traefik.tcp.services.pgbouncer-svc.loadbalancer.server.port=6432
+
+configs:
+  pgbouncer_ini:
+    external: true
+  pgbouncer_userlist:
+    external: true
+
+secrets:
+  cloudflare-cert:
+    external: true
+  cloudflare-key:
+    external: true
+  cloudflare-ca-cert:
+    external: true
+  azure-root-ca:
+    external: true
+
+networks:
+  traefik-internetwork:
+    external: true

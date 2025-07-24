@@ -55,6 +55,8 @@ api:
 entryPoints:
   valkey-redis:
     address: :6379
+  pgbouncer:
+    address: :6432
   metrics:
     address: :8082
   console:

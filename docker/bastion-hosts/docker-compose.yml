@@ -5,12 +5,22 @@ services:
       - traefik-internetwork
       - db-internetwork
       - monitoring-internetwork
+    secrets:
+      - source: cloudflare-cert
+        target: /mnt/cloudflare-cert.pem
+      - source: cloudflare-key
+        target: /mnt/cloudflare-key.pem
+      - source: cloudflare-ca-cert
+        target: /mnt/cloudflare-origin-ca.pem
+      - source: azure-root-ca
+        target: /mnt/azure-root-ca.pem
     volumes:
       - ubuntu-data:/data
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /var/lib/docker/volumes:/mnt/docker/volumes:rw
     deploy:
-      mode: global
+      mode: replicated
+      replicas: 1
       resources:
         limits:
           memory: "1G"
@@ -30,6 +40,16 @@ networks:
   db-internetwork:
     external: true
   monitoring-internetwork:
+    external: true
+
+secrets:
+  cloudflare-cert:
+    external: true
+  cloudflare-key:
+    external: true
+  cloudflare-ca-cert:
+    external: true
+  azure-root-ca:
     external: true
 
 volumes:
