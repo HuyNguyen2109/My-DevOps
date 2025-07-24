@@ -8,6 +8,7 @@ services:
       - 443:443
       - 8082:8082
       - 6379:6379
+      - 6432:6432
     deploy:
       mode: replicated
       replicas: 1
@@ -47,13 +48,6 @@ services:
         # Authentication with Authentik server
         - "traefik.http.routers.thisproxylocal.middlewares=authentik@file"
         - "traefik.http.routers.thisproxytls.middlewares=authentik@file"
-
-        # For Dokploy
-        - "traefik.http.routers.dokploy-apps.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.dokploy.${ROOT_DOMAIN}`)"
-        - "traefik.http.routers.dokploy-apps.entrypoints=websecure"
-        - "traefik.http.routers.dokploy-apps.tls.certresolver=letsencrypt"
-        - "traefik.http.routers.dokploy-apps.service=dokploy-forward"
-        - "traefik.http.services.dokploy-forward.loadbalancer.server.url=http://dokploy:80"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik-acme:/acme
