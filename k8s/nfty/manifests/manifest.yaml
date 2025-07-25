@@ -13,7 +13,7 @@ spec:
         app: ntfy
     spec:
       nodeSelector:
-        node-role.kubernetes.io/worker: 'true'
+        node.kubernetes.io/worker: 'true'
       containers:
       - name: ntfy
         image: binwiederhier/ntfy

@@ -17,7 +17,7 @@ antiAffinity: preferred
 topologyKey: kubernetes.io/hostname
 
 extraNodeSelectorTerms:
-  - key: "node-role.kubernetes.io/worker"
+  - key: "node.kubernetes.io/worker"
     operator: In
     values:
       - "true"
@@ -44,3 +44,8 @@ resources:
   limits:
     memory: "2Gi"
     cpu: "1"
+
+startupProbe:
+  failureThreshold: 60
+  periodSeconds: 5
+  initialDelaySeconds: 10

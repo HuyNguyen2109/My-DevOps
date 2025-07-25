@@ -18,7 +18,7 @@ longhornUI:
                     - longhorn-ui
             topologyKey: kubernetes.io/hostname
   nodeSelector:
-    node-role.kubernetes.io/worker: "true"
+    node.kubernetes.io/worker: "true"
 defaultSettings:
   defaultDataPath: "/var/lib/longhorn"
 enablePSP: false
