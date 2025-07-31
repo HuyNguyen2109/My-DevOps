@@ -4,9 +4,14 @@ variable "vm_definitions" {
     name         = string
     cores        = number
     memory       = number
-    disk_size    = string
+    disk_size    = number
     ipconfig0    = string
     tags         = string
     disk_storage = string
+    network = object({
+      address         = string
+      gateway         = string
+      dns_nameservers = list(string)
+    })
   }))
 }
