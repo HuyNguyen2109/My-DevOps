@@ -53,10 +53,6 @@ data "vault_generic_secret" "terraform" {
   path = "kubernetes/terraform"
 }
 
-data "local_file" "ssh_public_key" {
-  filename = "assets/homelab-linux.pub"
-}
-
 # === RESOURCES ===
 resource "proxmox_virtual_environment_file" "user_data_cloud_config" {
   for_each = var.vm_definitions
@@ -77,7 +73,7 @@ resource "proxmox_virtual_environment_file" "user_data_cloud_config" {
           - sudo
         shell: /bin/bash
         ssh_authorized_keys:
-          - ${trimspace(data.local_file.ssh_public_key.content)}
+          - ${trimspace(data.vault_generic_secret.terraform.data["proxmox-qemu-vm-sshkeys"])}
         sudo: ALL=(ALL) NOPASSWD:ALL
     package_update: true
     packages:
@@ -85,6 +81,12 @@ resource "proxmox_virtual_environment_file" "user_data_cloud_config" {
       - net-tools
       - curl
     runcmd:
+      - echo "${data.vault_generic_secret.terraform.data["cloudflare-origin-ca-pem-b64"]}" | base64 -d > /etc/ssl/certs/cloudflare-origin-ca.pem
+      - chmod 0644 /etc/ssl/certs/cloudflare-origin-ca.pem
+      - echo "${data.vault_generic_secret.terraform.data["cloudflare-cert-pem-b64"]}" | base64 -d > /etc/ssl/certs/cloudflare-cert.pem
+      - chmod 0644 /etc/ssl/certs/cloudflare-cert.pem
+      - echo "${data.vault_generic_secret.terraform.data["cloudflare-key-pem-b64"]}" | base64 -d > /etc/ssl/private/cloudflare-key.pem
+      - chmod 0600 /etc/ssl/private/cloudflare-key.pem
       - systemctl enable qemu-guest-agent
       - systemctl start qemu-guest-agent
       - curl -fsSL https://tailscale.com/install.sh | sh
@@ -92,7 +94,7 @@ resource "proxmox_virtual_environment_file" "user_data_cloud_config" {
       - echo "done" > /tmp/cloud-config.done
     EOF
 
-    file_name = "user-data-cloud-config.yaml"
+    file_name = "user-data-cloud-config-${each.value.name}.yaml"
   }
 }
 

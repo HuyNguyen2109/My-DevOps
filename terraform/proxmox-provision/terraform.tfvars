@@ -31,9 +31,9 @@ vm_definitions = {
     }
   }
 
-  k3s-master-05-wura = {
+  k3s-server-05-wura = {
     node      = "prx-prd-02"
-    name      = "k3s-master-05-wura"
+    name      = "k3s-server-05-wura"
     cores     = 4
     memory    = 6144
     disk_size = 64
