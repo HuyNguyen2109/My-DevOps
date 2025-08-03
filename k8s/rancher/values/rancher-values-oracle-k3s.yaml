@@ -17,10 +17,14 @@ antiAffinity: preferred
 topologyKey: kubernetes.io/hostname
 
 extraNodeSelectorTerms:
-  - key: "node.kubernetes.io/worker"
+  - key: "node-role.gateway"
     operator: In
     values:
       - "true"
+extraTolerations:
+  - key: "CriticalAddonsOnly"
+    effect: "NoSchedule"
+    value: "true"
 
 postDelete:
   timeout: 600
