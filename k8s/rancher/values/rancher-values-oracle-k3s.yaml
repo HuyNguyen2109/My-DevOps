@@ -23,7 +23,7 @@ extraNodeSelectorTerms:
       - "true"
 extraTolerations:
   - key: "CriticalAddonsOnly"
-    effect: "NoSchedule"
+    effect: "NoExecute"
     value: "true"
 
 postDelete:
