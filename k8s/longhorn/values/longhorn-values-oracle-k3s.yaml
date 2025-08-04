@@ -2,6 +2,11 @@ global:
   nodeSelector:
     node.kubernetes.io/worker: "true"
     topology.kubernetes.io/region: "sg-prod-01"
+
+networkPolicies:
+  enabled: true
+  type: "k3s"
+
 service:
   ui:
     type: Rancher-Proxy
@@ -27,7 +32,18 @@ enablePSP: false
 
 persistence:
   defaultClassReplicaCount: 2
+  reclaimPolicy: "Retain"
+  migratable: true
+  dataEngine: v2
 
 defaultBackupStore:
   backupTarget: "s3://longhorn@auto/"
   backupTargetCredentialSecret: "minio-secret-eso"
+
+longhornManager:
+  log:
+    format: json
+
+longhornDriver:
+  log:
+    format: json
