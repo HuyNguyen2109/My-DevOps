@@ -1,3 +1,7 @@
+global:
+  nodeSelector:
+    node.kubernetes.io/worker: "true"
+    topology.kubernetes.io/region: "sg-prod-01"
 service:
   ui:
     type: Rancher-Proxy
@@ -17,9 +21,6 @@ longhornUI:
                   values:
                     - longhorn-ui
             topologyKey: kubernetes.io/hostname
-  nodeSelector:
-    node.kubernetes.io/worker: "true"
-    topology.kubernetes.io/region: "sg-prod-01"
 defaultSettings:
   defaultDataPath: "/var/lib/longhorn"
 enablePSP: false
