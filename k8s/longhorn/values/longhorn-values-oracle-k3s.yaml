@@ -19,7 +19,7 @@ longhornUI:
             topologyKey: kubernetes.io/hostname
   nodeSelector:
     node.kubernetes.io/worker: "true"
-    topology.kubernetes.io/zone: "sg-prod-01"
+    topology.kubernetes.io/region: "sg-prod-01"
 defaultSettings:
   defaultDataPath: "/var/lib/longhorn"
 enablePSP: false
