@@ -9,16 +9,16 @@ spec:
     name: on-cloud
   source:
     path: ''
-    repoURL: https://releases.rancher.com/server-charts/stable
-    targetRevision: 2.11.3
+    repoURL: https://releases.rancher.com/server-charts/latest
+    targetRevision: 2.12.0
     chart: rancher
     helm:
       valueFiles:
         - $values/k8s/rancher/values/rancher-values-oracle-k3s.yaml
   sources:
-    - repoURL: https://releases.rancher.com/server-charts/stable
+    - repoURL: https://releases.rancher.com/server-charts/latest
       chart: rancher
-      targetRevision: 2.11.3
+      targetRevision: 2.12.0
       helm:
         valueFiles:
           - $values/k8s/rancher/values/rancher-values-oracle-k3s.yaml
