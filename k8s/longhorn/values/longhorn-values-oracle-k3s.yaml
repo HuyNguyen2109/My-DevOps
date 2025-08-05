@@ -28,8 +28,6 @@ longhornUI:
             topologyKey: kubernetes.io/hostname
 defaultSettings:
   defaultDataPath: "/var/lib/longhorn"
-  v2DataEngineGuaranteedInstanceManagerCPU: "800"
-  v2DataEngine: "true"
   deletingConfirmationFlag: "true"
   replicaAutoBalance: "true"
 enablePSP: false
@@ -38,7 +36,6 @@ persistence:
   defaultClassReplicaCount: 2
   reclaimPolicy: "Retain"
   migratable: true
-  dataEngine: v2
 
 defaultBackupStore:
   backupTarget: "s3://longhorn@auto/"
