@@ -29,6 +29,9 @@ longhornUI:
 defaultSettings:
   defaultDataPath: "/var/lib/longhorn"
   v2DataEngineGuaranteedInstanceManagerCPU: "800"
+  v2DataEngine: "true"
+  deletingConfirmationFlag: "true"
+  replicaAutoBalance: "true"
 enablePSP: false
 
 persistence:
