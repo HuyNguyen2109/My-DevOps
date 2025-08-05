@@ -28,6 +28,7 @@ longhornUI:
             topologyKey: kubernetes.io/hostname
 defaultSettings:
   defaultDataPath: "/var/lib/longhorn"
+  v2DataEngineGuaranteedInstanceManagerCPU: "800"
 enablePSP: false
 
 persistence:
