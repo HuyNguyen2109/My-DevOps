@@ -35,8 +35,8 @@ export TRAEFIK_URL="sg.mcb-svc.work"
 export IMAGE_TAG="v3.5.0-rc1"
 # === Create Docker Config via STDIN ===
 echo "Parsing all necessary variables into config..."
-docker config rm $TRAEFIK_CONFIG_FILE
-docker config rm $TRAEFIK_MIDDLEWARE_FILE
+docker config rm $TRAEFIK_CONFIG_FILE > /dev/null 2>&1 || true
+docker config rm $TRAEFIK_MIDDLEWARE_FILE > /dev/null 2>&1 || true
 cat <<EOF | docker config create $TRAEFIK_CONFIG_FILE -
 global:
   checkNewVersion: true

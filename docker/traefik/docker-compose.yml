@@ -88,18 +88,8 @@ services:
 volumes:
   traefik-acme:
     driver: local
-    # Mount the volume to the SeaweedFS mount point
-    driver_opts:
-      type: none
-      device: /mnt/seaweedfs/mount/traefik/acme
-      o: bind
   traefik-logs:
     driver: local
-    # Mount the volume to the SeaweedFS mount point
-    driver_opts:
-      type: none
-      device: /mnt/seaweedfs/mount/traefik/logs
-      o: bind
 
 configs:
   traefik-middlewares:
