@@ -1,6 +1,6 @@
 services:
   vault:
-    image: hashicorp/vault:latest
+    image: hashicorp/vault:${IMAGE_TAG}
     command: server
     cap_add:
       - IPC_LOCK
@@ -34,7 +34,7 @@ services:
       placement:
         constraints:
           - node.platform.os == linux
-          - node.role == worker
+          - node.labels.type == constructor
       labels:
         - "traefik.enable=true"
         - "traefik.http.routers.vault.rule=Host(`${VAULT_URL}`)"
@@ -48,16 +48,8 @@ configs:
 volumes:
   vault-data:
     driver: local
-    driver_opts:
-      type: none
-      device: /mnt/seaweedfs/mount/vault/data
-      o: bind
   vault-logs:
     driver: local
-    driver_opts:
-      type: none
-      device: /mnt/seaweedfs/mount/vault/logs
-      o: bind
 networks:
   traefik-internetwork:
     external: true

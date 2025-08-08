@@ -1,7 +1,7 @@
 #!/bin/bash
 # Define stack name (change this as needed)
 STACK_NAME="hashicorp"
-CONFIG_FILE="vault_config"
+CONFIG_FILE="vault-config"
 # === Remove existing Docker services if it exists ===
 docker stack rm "$STACK_NAME" >/dev/null 2>&1 || true
 # === Check if Azure CLI is installed ===
@@ -28,9 +28,11 @@ done
 # === Get secrets from Azure Key Vault ===
 echo "🔐 Fetching secrets from Azure Key Vault..."
 PG_CONNECTION_STRING=$(az keyvault secret show --vault-name "$AZURE_VAULT_NAME" --name "connection-string" --query "value" -o tsv)
+export VAULT_URL="vault.mcb-svc.work"
+export IMAGE_TAG="1.20.2"
 # === Create Docker Config via STDIN ===
 echo "Parsing all necessary variables into config..."
-docker config rm $CONFIG_FILE
+docker config rm $CONFIG_FILE > /dev/null 2>&1 || true
 cat <<EOF | docker config create $CONFIG_FILE -
 ui = true
 disable_mlock = true
@@ -52,16 +54,6 @@ seal "azurekeyvault" {
   key_name       = "unseal-key-hcl"
 }
 EOF
-# === Load environment variables from .env file ===
-echo "Loading variables into cmd"
-if [ -f .env ]; then
-    set -a  # Automatically export all variables
-    source .env
-    set +a
-else
-    echo "⚠️  .env file not found! Make sure it exists in the current directory."
-    exit 1
-fi
 # Deploy the stack
 docker stack deploy -c docker-compose.yml "$STACK_NAME"
 echo "✅ Docker stack '$STACK_NAME' deployed successfully!"
