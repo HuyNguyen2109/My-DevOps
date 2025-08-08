@@ -42,18 +42,18 @@ listen_addr = 0.0.0.0
 listen_port = 6432
 auth_type = md5
 auth_file = /opt/bitnami/pgbouncer/conf/userlist.txt
-pool_mode = transaction
+pool_mode = statement
 
 ; Connection limits
 max_client_conn = 500 
-default_pool_size = 10
-reserve_pool_size = 20
-reserve_pool_timeout = 3.0
+default_pool_size = 30
+reserve_pool_size = 10
+reserve_pool_timeout = 5.0
 
 ; Timeouts
 server_login_retry = 5
-server_lifetime = 3600
-server_idle_timeout = 600
+server_lifetime = 86400
+server_idle_timeout = 60
 server_connect_timeout = 15
 query_timeout = 600
 
