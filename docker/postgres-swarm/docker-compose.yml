@@ -1,23 +1,46 @@
 services:
+  postgres-init:
+    image: bitnami/minideb:latest
+    secrets:
+      - postgres-cert-pem
+      - postgres-key-pem
+      - postgres-ca-pem
+    volumes:
+      - pg-certs:/opt/bitnami/postgresql/certs
+    command: 
+      - /bin/bash
+      - -c
+      - |
+        cp /run/secrets/postgres-cert-pem /opt/bitnami/postgresql/certs/server.crt && \
+        cp /run/secrets/postgres-key-pem  /opt/bitnami/postgresql/certs/server.key && \
+        cp /run/secrets/postgres-ca-pem   /opt/bitnami/postgresql/certs/ca.crt && \
+        chown 1001:1001 /opt/bitnami/postgresql/certs/server.* && \
+        chmod 600 /opt/bitnami/postgresql/certs/server.key
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: none
+    networks:
+      - db-internetwork
+
   postgresql-master:
-    image: 'bitnami/postgresql:16-debian-12'
-    # ports:
-    # # When using this type of exposing, make sure the host on port
-    # # is behind specific Mesh/VPN network and using for internal only
-    #   - target: 5432
-    #     published: 5432
-    #     protocol: tcp
-    #     mode: host
-    #   #- 5432:5432
+    image: 'bitnami/postgresql:${IMAGE_TAG}'
+    depends_on:
+      - postgres-init
     secrets:
       - postgres-root-password
     volumes:
       - postgres-prod-master:/bitnami/postgresql
+      - pg-certs:/opt/bitnami/postgresql/certs
     configs:
       - source: postgres-extended-conf
-        target: /bitnami/postgresql/conf/conf.d/extened.conf
+        target: /bitnami/postgresql/conf/conf.d/extended.conf
+      - source: pg-hba-conf
+        target: /bitnami/postgresql/conf/pg_hba.conf
     networks:
       - db-internetwork
+      - traefik-internetwork
     deploy:
       update_config:
         parallelism: 1
@@ -28,7 +51,7 @@ services:
       resources:
         limits:
           cpus: "1"   
-          memory: "4G"  
+          memory: "3G"  
         reservations:
           cpus: "0.125"
           memory: "1G"
@@ -37,6 +60,11 @@ services:
       placement:
         constraints:
           - node.labels.database == master
+      labels:
+        - "traefik.enable=true"
+        - "traefik.tcp.routers.postgres.rule=HostSNI(`*`)"
+        - "traefik.tcp.routers.postgres.entrypoints=postgres"
+        - "traefik.tcp.services.postgres.loadbalancer.server.port=5432"
     environment:
       - POSTGRESQL_REPLICATION_MODE=master
       - POSTGRESQL_REPLICATION_USER=${REPLICATION_USER}
@@ -44,15 +72,14 @@ services:
       - POSTGRESQL_PASSWORD_FILE=/run/secrets/postgres-root-password
       - POSTGRESQL_SYNCHRONOUS_COMMIT_MODE=on
       - POSTGRESQL_NUM_SYNCHRONOUS_REPLICAS=1
+      - POSTGRESQL_TLS_CERT_FILE=/opt/bitnami/postgresql/certs/server.crt
+      - POSTGRESQL_TLS_KEY_FILE=/opt/bitnami/postgresql/certs/server.key
+      - POSTGRESQL_TLS_CA_FILE=/opt/bitnami/postgresql/certs/ca.crt
+      - POSTGRESQL_TLS_ENABLED=yes
+      - POSTGRESQL_PGHBA_FILE=/bitnami/postgresql/conf/pg_hba.conf
+  
   postgresql-slave:
-    image: 'bitnami/postgresql:16-debian-12'
-    #ports:
-    # When using this type of exposing, make sure the host on port
-    # is behind specific Mesh/VPN network and using for internal only
-      # - target: 5432
-      #   published: 5433
-      #   mode: ingress
-      #- 5433:5432
+    image: 'bitnami/postgresql:${IMAGE_TAG}'
     volumes:
       - postgres-prod-slave:/bitnami/postgresql
     configs:
@@ -100,12 +127,22 @@ networks:
 secrets:
   postgres-root-password:
     external: true
+  postgres-cert-pem:
+    external: true
+  postgres-key-pem:
+    external: true
+  postgres-ca-pem:
+    external: true
 
 configs:
   postgres-extended-conf:
     external: true
+  pg-hba-conf:
+    external: true
 
 volumes:
+  pg-certs:
+    driver: local
   postgres-prod-master:
     driver: local
   postgres-prod-slave:
