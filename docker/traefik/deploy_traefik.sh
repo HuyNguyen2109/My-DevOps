@@ -42,7 +42,7 @@ global:
   checkNewVersion: true
 
 log:
-  level: ERROR
+  level: DEBUG
 
 accessLog:
   filePath: "/logs/access.log"
@@ -57,6 +57,8 @@ entryPoints:
     address: :6379
   pgbouncer:
     address: :6432
+  postgres:
+    address: :5432
   metrics:
     address: :8082
   console:
