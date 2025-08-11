@@ -95,6 +95,8 @@ local   all             all                                  trust
 hostnossl all           all           10.0.0.0/8             md5
 hostnossl all           all           172.16.0.0/12          md5
 hostnossl all           all           192.168.0.0/16         md5
+# Allow Netbird network (no SSL)
+hostnossl all           all           100.64.0.0/10          md5
 
 # 3. Require SSL for any other (public) connections
 hostssl   all           all           0.0.0.0/0              md5
