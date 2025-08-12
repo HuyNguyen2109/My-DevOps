@@ -6,12 +6,17 @@ crds:
 
 global:
   domain: argocd.mcb-svc.work
+  networkPolicy:
+    create: true
+  nodeSelector:
+    node.kubernetes.io/worker: "true"
+    topology.kubernetes.io/region: "sg-prod-01"
 
 redis:
   enabled: false
 externalRedis:
   enabled: true
-  host: "sg.mcb-svc.work"
+  host: "vn2.mcb-svc.work"
   port: 6379
   existingSecret: redis-auth-secret-eso
 
