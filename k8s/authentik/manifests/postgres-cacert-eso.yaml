@@ -1,0 +1,22 @@
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: postgres-cacert-eso
+  namespace: administrator-apps
+spec:
+  refreshInterval: 24h
+  secretStoreRef:
+    name: vault-backend
+    kind: ClusterSecretStore
+  target:
+    name: postgres-cacert-eso
+    creationPolicy: Owner
+    template:
+      data:
+        cloudflare-origin-ca-pem-b64: '{{ index . "cloudflare-origin-ca-pem-b64" | b64dec }}'
+  data:
+    - secretKey: cloudflare-origin-ca-pem-b64
+      remoteRef:
+        key: terraform
+        property: cloudflare-origin-ca-pem-b64
+

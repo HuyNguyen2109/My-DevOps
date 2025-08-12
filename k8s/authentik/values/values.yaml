@@ -1,0 +1,62 @@
+global:
+  nodeSelector:
+    node.kubernetes.io/worker: "true"
+    topology.kubernetes.io/region: "sg-prod-01"
+  env:
+    - name: AUTHENTIK_SECRET_KEY
+      valueFrom:
+        secretKeyRef:
+          name: authentik-secret-key-eso
+          key: authentik-secret-key
+    - name: AUTHENTIK_POSTGRESQL__SSLMODE
+      value: "verify-full"
+    - name: AUTHENTIK_POSTGRESQL__SSLROOTCERT
+      valueFrom:
+        secretKeyRef:
+          name: postgres-cacert-eso
+          key: cloudflare-origin-ca-pem-b64
+    - name: AUTHENTIK_POSTGRESQL__SSLCERT
+      valueFrom:
+        secretKeyRef:
+          name: postgres-cert-eso
+          key: cloudflare-cert-pem-b64
+    - name: AUTHENTIK_POSTGRESQL__SSLKEY
+      valueFrom:
+        secretKeyRef:
+          name: postgres-key-eso
+          key: cloudflare-key-pem-b64
+    - name: AUTHENTIK_STORAGE__MEDIA__BACKEND
+      value: "s3"
+    - name: AUTHENTIK_STORAGE__MEDIA__S3__REGION
+      value: "auto"
+    - name: AUTHENTIK_STORAGE__MEDIA__S3__ENDPOINT
+      value: "https://32e21cb26175efbbdbd48a4ce2d76d39.r2.cloudflarestorage.com"
+    - name: AUTHENTIK_STORAGE__MEDIA__S3__BUCKET_NAME
+      value: "authentik"
+    - name: AUTHENTIK_STORAGE__MEDIA__S3__ACCESS_KEY
+      valueFrom:
+        secretKeyRef:
+          name: s3-client-id-eso
+          key: s3-client-id
+    - name: AUTHENTIK_STORAGE__MEDIA__S3__SECRET_KEY
+      valueFrom:
+        secretKeyRef:
+          name: s3-client-secret-eso
+          key: s3-client-secret
+
+server:
+  ingress:
+    enabled: true
+    inggressClassName: traefik
+    annotations:
+      cert-manager.io/cluster-issuer: "cloudflare-clusterissuer"
+      traefik.ingress.kubernetes.io/router.entrypoints: "websecure"
+      traefik.ingress.kubernetes.io/router.tls: "true"
+    hosts:
+      - auth.mcb-svc.work
+    tls:
+      - secretName: cloudflare-wildcard-cert
+        hosts:
+          - auth.mcb-svc.work
+
+
