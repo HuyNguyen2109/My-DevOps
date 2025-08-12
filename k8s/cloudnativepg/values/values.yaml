@@ -1,0 +1,18 @@
+replicaCount: 2
+
+nodeSelector:
+  node.kubernetes.io/worker: "true"
+  topology.kubernetes.io/region: "sg-prod-01"
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 1
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - cloudnative-pg
+          topologyKey: kubernetes.io/hostname
