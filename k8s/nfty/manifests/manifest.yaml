@@ -14,6 +14,7 @@ spec:
     spec:
       nodeSelector:
         node.kubernetes.io/worker: 'true'
+        topology.kubernetes.io/region: 'sg-prod-01'
       containers:
       - name: ntfy
         image: binwiederhier/ntfy
