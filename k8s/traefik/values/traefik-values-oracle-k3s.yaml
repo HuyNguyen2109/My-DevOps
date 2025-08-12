@@ -40,3 +40,12 @@ ingressClass:
   enabled: true
   isDefaultClass: true
   name: traefik
+
+ingressRoute:
+  healthcheck:
+    enabled: true
+    matchRule: PathPrefix(`/ping`)
+    annotations:
+      cert-manager.io/cluster-issuer: "cloudflare-clusterissuer"
+    tls:
+      secretName: cloudflare-cert-traefik
