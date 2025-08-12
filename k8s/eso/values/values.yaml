@@ -1,1 +1,4 @@
 installCRDs: true
+nodeSelector:
+  topology.kubernetes.io/region: sg-prod-01
+  node.kubernetes.io/worker: 'true'
