@@ -89,8 +89,11 @@ resource "proxmox_virtual_environment_file" "user_data_cloud_config" {
       - chmod 0600 /etc/ssl/private/cloudflare-key.pem
       - systemctl enable qemu-guest-agent
       - systemctl start qemu-guest-agent
-      - curl -fsSL https://tailscale.com/install.sh | sh
-      - tailscale up --authkey ${trimspace(data.vault_generic_secret.terraform.data["ts-auth-key"])} --exit-node= --accept-routes=false
+      - curl -fsSL https://pkgs.netbird.io/install.sh | sh
+      - netbird up --setup-key ${trimspace(data.vault_generic_secret.terraform.data["netbird-auth-key"])}
+      - |
+        grep -qxF "14.225.218.148 vn2.mcb-svc.work" /etc/hosts || \
+        echo "14.225.218.148 vn2.mcb-svc.work" >> /etc/hosts
       - echo "done" > /tmp/cloud-config.done
     EOF
 
