@@ -8,7 +8,7 @@ terraform {
   required_providers {
     proxmox = {
       source = "bpg/proxmox"
-      version = "0.80.0"
+      version = "0.82.0"
     }
     vault = {
       source = "hashicorp/vault"
@@ -89,8 +89,6 @@ resource "proxmox_virtual_environment_file" "user_data_cloud_config" {
       - chmod 0600 /etc/ssl/private/cloudflare-key.pem
       - systemctl enable qemu-guest-agent
       - systemctl start qemu-guest-agent
-      - curl -fsSL https://pkgs.netbird.io/install.sh | sh
-      - netbird up --setup-key ${trimspace(data.vault_generic_secret.terraform.data["netbird-auth-key"])}
       - |
         grep -qxF "14.225.218.148 vn2.mcb-svc.work" /etc/hosts || \
         echo "14.225.218.148 vn2.mcb-svc.work" >> /etc/hosts
@@ -164,7 +162,7 @@ resource "proxmox_virtual_environment_download_file" "ubuntu_cloud_image" {
   node_name    = each.value.node
   url          = "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
   # need to rename the file to *.qcow2 to indicate the actual file format for import
-  file_name = "noble-server-cloudimg-amd64.qcow2"
+  file_name = "noble-server-cloudimg-amd64-${each.value.name}.qcow2"
 }
 
 output "vm_ipv4_address" {
