@@ -13,7 +13,7 @@ spec:
     creationPolicy: Owner
     template:
       data:
-        cloudflare-key-pem-b64: '{{ index . "cloudflare-key-pem-b64" | b64dec }}'
+        cloudflare-key-pem-b64: '{{ index . "cloudflare-key-pem-b64" | b64dec | replace "\r\n" "\n" }}'
   data:
     - secretKey: cloudflare-key-pem-b64
       remoteRef:
