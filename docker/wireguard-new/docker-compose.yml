@@ -50,7 +50,7 @@ services:
       replicas: 1
       labels:
         - "traefik.enable=true"
-        - "traefik.docker.network=traefik-internetwork"
+        - "traefik.swarm.network=traefik-internetwork"
         - "traefik.http.routers.wireguard-http.entrypoints=web"
         - "traefik.http.routers.wireguard-http.rule=Host(`wg.mcb-svc.work`)"
         - "traefik.http.routers.wireguard-http.middlewares=wireguard-https"
