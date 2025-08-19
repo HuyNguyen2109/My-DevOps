@@ -12,6 +12,23 @@ docker stack rm "$STACK_NAME" >/dev/null 2>&1 || true
 docker secret rm $POSTGRES_CERT_PEM >/dev/null 2>&1 || true
 docker secret rm $POSTGRES_KEY_PEM >/dev/null 2>&1 || true
 docker secret rm $POSTGRES_CA_PEM >/dev/null 2>&1 || true
+# === Check if Vault CLI is installed ===
+echo "Checking vault cli is installed..."
+if ! command -v vault >/dev/null 2>&1; then
+    echo "❌ Vault CLI is not installed!"
+    exit 1
+fi
+echo "Checking Vault credentials for Vault..."
+REQUIRED_VARS=(
+  VAULT_ADDR
+  VAULT_TOKEN
+)
+for VAR in "${REQUIRED_VARS[@]}"; do
+  if [ -z "${!VAR}" ]; then
+    echo "❌ Environment variable '$VAR' is not set or is empty."
+    exit 1
+  fi
+done
 # Load environment variables from .env file
 export IMAGE_TAG="17-debian-12"
 
