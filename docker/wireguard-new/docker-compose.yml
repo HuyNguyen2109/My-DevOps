@@ -3,14 +3,14 @@ networks:
     external: true
 
 volumes:
-  wireguard-old-data:
+  wireguard-data:
     driver: local
 
 services:
   core:
-    image: weejewel/wg-easy:7
+    image: ghcr.io/wg-easy/wg-easy:13
     volumes:
-      - wireguard-old-data:/etc/wireguard
+      - wireguard-data:/etc/wireguard
       - /lib/modules:/lib/modules:ro
     environment:
     # To make it work:
@@ -23,10 +23,9 @@ services:
     # 3. Set:
     #  WG_POST_UP=iptables -A FORWARD -i %i -j ACCEPT; iptables -t nat -A POSTROUTING -j MASQUERADE; iptables -A FORWARD -o %i -j ACCEPT
     #  WG_POST_DOWN=iptables -D FORWARD -i %i -j ACCEPT; iptables -t nat -D POSTROUTING -j MASQUERADE; iptables -D FORWARD -o %i -j ACCEPT
+      - INSECURE=true
+      - DISABLE_IPV6=true
       - WG_HOST=${WG_HOST}
-      - PASSWORD=${PASSWORD}
-      - WG_POST_UP=iptables -A FORWARD -i %i -j ACCEPT; iptables -t nat -A POSTROUTING -j MASQUERADE; iptables -A FORWARD -o %i -j ACCEPT
-      - WG_POST_DOWN=iptables -D FORWARD -i %i -j ACCEPT; iptables -t nat -D POSTROUTING -j MASQUERADE; iptables -D FORWARD -o %i -j ACCEPT
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
