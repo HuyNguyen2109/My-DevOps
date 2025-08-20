@@ -36,7 +36,7 @@ export PG_DB="authentik-prd"
 export PG_USER="authentik_dbadmin"
 export REPLICA_0_HOST="postgresql-slave"
 export UI_URL="auth.mcb-svc.work"
-export AUTHENTIK_TAG="2025.6.3"
+export AUTHENTIK_TAG="2025.6.4"
 # Deploy the stack
 docker stack deploy -c docker-compose.yml "$STACK_NAME"
 echo "✅ Docker stack '$STACK_NAME' deployed successfully!"
