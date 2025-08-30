@@ -27,6 +27,7 @@ export S3_SECRET_ACCESS_KEY=$(vault kv get -field=s3-client-secret kubernetes/do
 export S3_ENDPOINT="https://$(vault kv get -field=s3-endpoint kubernetes/docker-secrets)"
 export PG_PASS=$(vault kv get -field=authentik-db-password kubernetes/docker-secrets)
 export AUTHENTIK_SECRET_KEY=$(vault kv get -field=authentik-secret-key kubernetes/docker-secrets)
+export AUTHENTIK_OUTPOST_TOKEN=$(vault kv get -field=authentik-outpost-token kubernetes/docker-secrets)
 export VALKEY_AUTH_PASSWORD=$(vault kv get -field=valkey-auth-password kubernetes/docker-secrets)
 export S3_REGION="auto"
 export S3_BUCKET="authentik"
@@ -36,7 +37,7 @@ export PG_DB="authentik-prd"
 export PG_USER="authentik_dbadmin"
 export REPLICA_0_HOST="postgresql-slave"
 export UI_URL="auth.mcb-svc.work"
-export AUTHENTIK_TAG="2025.6.4"
+export AUTHENTIK_TAG="2025.8.1"
 # Deploy the stack
 docker stack deploy -c docker-compose.yml "$STACK_NAME"
 echo "✅ Docker stack '$STACK_NAME' deployed successfully!"
