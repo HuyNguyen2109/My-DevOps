@@ -1,40 +1,6 @@
 services:
-  redis:
-    image: docker.io/library/redis:alpine
-    command: --save 60 1 --loglevel warning
-    healthcheck:
-      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
-      start_period: 20s
-      interval: 30s
-      retries: 5
-      timeout: 3s
-    volumes:
-      - redis:/data
-    networks:
-      - db-internetwork
-    deploy:
-      mode: replicated
-      replicas: 1
-      resources:
-        limits:
-          cpus: "0.25"
-          memory: "256M"
-        reservations:
-          cpus: "0.125"  
-          memory: "128M"
-      update_config:
-        parallelism: 1
-        delay: 5s
-        failure_action: rollback
-        max_failure_ratio: 0.5
-      restart_policy:
-        condition: any
-      placement:
-        constraints:
-          - node.role == manager
-
   authentik-outpost-proxy:
-    image: ghcr.io/goauthentik/proxy:${AUTHENTIK_TAG:-2025.2.2}
+    image: ghcr.io/goauthentik/proxy:${AUTHENTIK_TAG:-2025.4.1}
       # Optionally specify which networks the container should be
       # might be needed to reach the core authentik server
     networks:
@@ -44,7 +10,7 @@ services:
       - 9000:9000
       - 9443:9443
     environment:
-      AUTHENTIK_REDIS__HOST: redis
+      AUTHENTIK_REDIS__HOST: valkey-server
       AUTHENTIK_HOST: https://auth.mcb-svc.work
       AUTHENTIK_INSECURE: "false"
       AUTHENTIK_TOKEN: ${AUTHENTIK_TOKEN}
