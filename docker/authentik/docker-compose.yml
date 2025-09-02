@@ -1,4 +1,3 @@
----
 
 services:
   server:
@@ -7,7 +6,7 @@ services:
     environment:
       AUTHENTIK_REDIS__HOST: valkey-server
       AUTHENTIK_REDIS__PASSWORD: ${VALKEY_AUTH_PASSWORD}
-      AUTHENTIK_POSTGRESQL__HOST: postgresql-master
+      AUTHENTIK_POSTGRESQL__HOST: ${PG_HOST}
       AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
       AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
       AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
@@ -57,7 +56,7 @@ services:
     environment:
       AUTHENTIK_REDIS__HOST: valkey-server
       AUTHENTIK_REDIS__PASSWORD: ${VALKEY_AUTH_PASSWORD}
-      AUTHENTIK_POSTGRESQL__HOST: postgresql-master
+      AUTHENTIK_POSTGRESQL__HOST: ${PG_HOST}
       AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
       AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
       AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
@@ -99,11 +98,11 @@ services:
       - db-internetwork
     environment:
       AUTHENTIK_REDIS__HOST: valkey-server
+      AUTHENTIK_REDIS__PASSWORD: ${VALKEY_AUTH_PASSWORD}
       AUTHENTIK_HOST: https://auth.mcb-svc.work
       AUTHENTIK_INSECURE: "false"
       AUTHENTIK_TOKEN: ${AUTHENTIK_OUTPOST_TOKEN}
-    depends_on:
-      - redis
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
     deploy:
       mode: replicated
       replicas: 1
