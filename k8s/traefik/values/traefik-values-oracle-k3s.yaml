@@ -42,10 +42,25 @@ ingressClass:
   name: traefik
 
 ingressRoute:
+  dashboard:
+    enabled: true
+    matchRule: PathPrefix(`/dashboard`) || PathPrefix(`/api`)
+    entryPoints:
+      - websecure
+    middlewares:
+      - name: authentik-outpost-proxy
+        namespace: default
+    tls:
+      secretName: cloudflare-cert-traefik
   healthcheck:
     enabled: true
     matchRule: PathPrefix(`/ping`)
-    annotations:
-      cert-manager.io/cluster-issuer: "cloudflare-clusterissuer"
-    tls:
-      secretName: cloudflare-cert-traefik
+    entryPoints:
+      - websecure
+  tls:
+    secretName: cloudflare-cert-traefik
+
+providers:
+  kubernetesCRD:
+    enabled: true
+    allowCrossNamespace: true
