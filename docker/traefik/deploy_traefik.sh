@@ -3,6 +3,7 @@
 STACK_NAME="traefik"
 TRAEFIK_CONFIG_FILE="traefik-config"
 TRAEFIK_MIDDLEWARE_FILE="traefik-middlewares"
+TRAEFIK_FUNNEL_FILE="traefik-funnel"
 # === Remove existing Docker services if it exists ===
 docker stack rm "$STACK_NAME" >/dev/null 2>&1 || true
 # === Check if Azure CLI is installed ===
@@ -42,7 +43,7 @@ global:
   checkNewVersion: true
 
 log:
-  level: DEBUG
+  level: ERROR
 
 accessLog:
   filePath: "/logs/access.log"
@@ -80,7 +81,8 @@ providers:
     exposedByDefault: false
     network: traefik-internetwork
   file:
-    filename: "/etc/traefik/middlewares.yaml"
+    directory: "/etc/traefik/dynamic/"
+    watch: true
 
 certificatesResolvers:
   letsencrypt:
@@ -107,11 +109,8 @@ cat <<EOF | docker config create $TRAEFIK_MIDDLEWARE_FILE -
 http:
   middlewares:
     authentik:
-      # basicAuth:
-      #   users:
-      #     - "$TRAEFIK_USER:$TRAEFIK_PASSWORD"
       forwardAuth:
-        address: http://server:9000/outpost.goauthentik.io/auth/traefik
+        address: http://authentik-outpost-proxy:9000/outpost.goauthentik.io/auth/traefik
         trustForwardHeader: true
         authResponseHeaders:
           - X-authentik-username
@@ -126,6 +125,27 @@ http:
           - X-authentik-meta-provider
           - X-authentik-meta-app
           - X-authentik-meta-version
+EOF
+
+cat <<EOF | docker config create $TRAEFIK_FUNNEL_FILE -
+http:
+  routers:
+    proxmox:
+      rule: "Host(\"proxmox.mcb-svc.work\")"
+      entryPoints:
+        - websecure
+      service: proxmox-service
+      tls:
+        certResolver: letsencrypt
+  services:
+    proxmox-service:
+      loadBalancer:
+        servers:
+          - url: "https://192.168.1.6:8006"
+        serversTransport: insecureTransport
+  serversTransports:
+    insecureTransport:
+      insecureSkipVerify: true
 EOF
 # Deploy the stack
 docker stack deploy -c docker-compose.yml "$STACK_NAME"

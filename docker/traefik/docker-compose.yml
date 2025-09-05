@@ -55,9 +55,11 @@ services:
       - traefik-logs:/logs
     configs:
       - source: traefik-middlewares
-        target: /etc/traefik/middlewares.yaml
+        target: /etc/traefik/dynamic/middlewares.yaml
       - source: traefik-config
         target: /etc/traefik/traefik.yaml
+      - source: traefik-funnel
+        target: /etc/traefik/dynamic/funnel.yaml
     environment:
       - CF_API_EMAIL=${CF_API_EMAIL}
       - CF_API_KEY=${CF_API_KEY}
@@ -96,6 +98,8 @@ configs:
   traefik-middlewares:
     external: true
   traefik-config:
+    external: true
+  traefik-funnel:
     external: true
       
 networks:
