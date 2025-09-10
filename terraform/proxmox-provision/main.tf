@@ -92,6 +92,9 @@ resource "proxmox_virtual_environment_file" "user_data_cloud_config" {
       - |
         grep -qxF "14.225.218.148 vn2.mcb-svc.work" /etc/hosts || \
         echo "14.225.218.148 vn2.mcb-svc.work" >> /etc/hosts
+      - sudo apt update && sudo apt upgrade -y
+      - curl -fsSL https://tailscale.com/install.sh | sh
+      - sudo tailscale up --authkey ${data.vault_generic_secret.terraform.data["ts-auth-key"]} --accept-routes --accept-dns=false --exit-node=
       - echo "done" > /tmp/cloud-config.done
     EOF
 
