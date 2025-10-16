@@ -1,18 +1,41 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: observation-pod-ubuntu-pvc
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 5Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: observation-pod
+  name: observation-pod-ubuntu
+  namespace: default
 spec:
   selector:
     matchLabels:
-      app: observation-pod
+      app: observation-pod-ubuntu
   template:
     metadata:
       labels:
-        app: observation-pod
+        app: observation-pod-ubuntu
     spec:
+      nodeSelector:
+        node.kubernetes.io/worker: "true"
+        topology.kubernetes.io/region: "sg-prod-01"
       containers:
-        - name: busybox
-          image: curlimages/curl:latest
-          command: ["sleep", "3600"]
+        - name: observation-pod-ubuntu
+          image: ubuntu/nginx:1.24-24.04_edge
+          volumeMounts:
+            - name: ubuntu-data
+              mountPath: /data
+      volumes:
+        - name: ubuntu-data
+          persistentVolumeClaim:
+            claimName: observation-pod-ubuntu-pvc
       restartPolicy: Always
