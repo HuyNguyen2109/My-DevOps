@@ -1,8 +1,27 @@
-replicaCount: 2
+replicaCount: 1
 
 nodeSelector:
-  node.kubernetes.io/worker: "true"
-  topology.kubernetes.io/region: "sg-prod-01"
+  node-role.kubernetes.io/master: "true"
+
+tolerations:
+- key: "CriticalAddonsOnly"
+  value: "true"
+  operator: "Equal"
+  effect: "NoExecute"
+
+additionalEnv:
+  - name: LEADER_ELECTION_LEASE_DURATION
+    value: "60s"
+  - name: LEADER_ELECTION_RENEW_DEADLINE
+    value: "45s"
+  - name: LEADER_ELECTION_RETRY_PERIOD
+    value: "15s"
+  - name: KUBERNETES_REQUEST_TIMEOUT
+    value: "60s"
+  - name: KUBERNETES_REQUEST_QPS
+    value: "20"
+  - name: KUBERNETES_REQUEST_BURST
+    value: "40"
 
 affinity:
   podAntiAffinity:

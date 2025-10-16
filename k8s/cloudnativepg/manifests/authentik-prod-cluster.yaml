@@ -1,0 +1,220 @@
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: authentik-db-user-secret-eso
+  namespace: databases
+spec:
+  refreshInterval: 24h
+  secretStoreRef:
+    name: vault-backend
+    kind: ClusterSecretStore
+  target:
+    name: authentik-db-user-secret-eso
+    creationPolicy: Owner
+    template:
+      type: kubernetes.io/basic-auth
+  data:
+    - secretKey: password
+      remoteRef:
+        key: docker-secrets
+        property: authentik-db-password
+    - secretKey: username
+      remoteRef:
+        key: docker-secrets
+        property: authentik-db-user
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: cpng-barman-backup-eso
+  namespace: databases
+spec:
+  refreshInterval: 24h
+  secretStoreRef:
+    name: vault-backend
+    kind: ClusterSecretStore
+  target:
+    name: cpng-barman-backup-eso
+    creationPolicy: Owner
+  data:
+    - secretKey: ACCESS_KEY_ID
+      remoteRef:
+        key: docker-secrets
+        property: s3-client-id
+    - secretKey: ACCESS_SECRET_KEY
+      remoteRef:
+        key: docker-secrets
+        property: s3-client-secret
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: postgres-authentik-prod-backup
+  namespace: databases
+spec:
+  cluster:
+    name: postgres-authentik-prod
+  schedule: '0 0 0 * * *'
+  backupOwnerReference: self
+  method: plugin
+  pluginConfiguration:
+    name: barman-cloud.cloudnative-pg.io
+---
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: authentik-db-backup-s3
+  namespace: databases
+spec:
+  configuration:
+    destinationPath: s3://authentik/authentik-db-backup-prd/
+    endpointURL: https://32e21cb26175efbbdbd48a4ce2d76d39.r2.cloudflarestorage.com
+    s3Credentials:
+      accessKeyId:
+        name: cpng-barman-backup-eso
+        key: ACCESS_KEY_ID
+      secretAccessKey:
+        name: cpng-barman-backup-eso
+        key: ACCESS_SECRET_KEY
+    wal:
+      compression: gzip
+      encryption: AES256
+    data:
+      compression: gzip
+      encryption: AES256
+      immediateCheckpoint: false
+      jobs: 2
+  retentionPolicy: "2d"
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres-authentik-prod
+  namespace: databases
+spec:
+  # Start instances immediately (override operator default startDelay)
+  startDelay: 0
+  instances: 2
+  imageName: "ghcr.io/cloudnative-pg/postgresql:17-minimal-bullseye"
+  primaryUpdateStrategy: unsupervised
+
+  # Storage for main DB (per-instance PVC)
+  storage:
+    size: 200Mi
+    storageClass: longhorn
+
+  # Dedicated WAL storage (recommended)
+  walStorage:
+    storageClass: longhorn
+    size: 512Mi
+
+  postgresql:
+    parameters:
+      shared_buffers: "768MB"
+      work_mem: "16MB"
+      maintenance_work_mem: "192MB"
+      effective_cache_size: "2GB"
+      wal_buffers: "16MB"
+      temp_buffers: "8MB"
+      checkpoint_completion_target: "0.9"
+      checkpoint_timeout: "15min"
+      max_wal_size: "256MB"
+      min_wal_size: "80MB"
+      max_parallel_workers: "2"
+      max_parallel_workers_per_gather: "1"
+      parallel_setup_cost: "1000"
+      parallel_tuple_cost: "0.1"
+      max_connections: "50"
+      superuser_reserved_connections: "3"
+      wal_level: "replica"
+      synchronous_commit: "on"
+      full_page_writes: "on"
+      archive_mode: "off"
+      random_page_cost: "1.1"
+      effective_io_concurrency: "200"
+      log_min_duration_statement: "500ms"
+      log_checkpoints: "on"
+      log_connections: "off"
+      log_disconnections: "off"
+      autovacuum: "on"
+      autovacuum_naptime: "15s"
+      autovacuum_vacuum_scale_factor: "0.05"
+      autovacuum_analyze_scale_factor: "0.02"
+    pg_hba:
+      - "host all all 0.0.0.0/0 scram-sha-256"
+  bootstrap:
+    initdb:
+      database: authentik-prd
+      owner: authentik_dbadmin
+      # Use the existing basic-auth secret to set the owner's password during initdb
+      secret:
+        name: authentik-db-user-secret-eso
+      # Run SQL after initialization to set role options (SUPERUSER, CREATEDB, CREATEROLE)
+      postInitSQL:
+        - ALTER ROLE authentik_dbadmin WITH SUPERUSER;
+        - ALTER ROLE authentik_dbadmin WITH CREATEDB;
+        - ALTER ROLE authentik_dbadmin WITH CREATEROLE;
+    # Note: CloudNativePG Cluster CRD v1 does not accept a `users` field here.
+    # To create additional DB roles at bootstrap, use `postInitSQL`/`postInitSQLRefs`
+    # or managed roles if supported by your operator version. Kept only initdb
+    # database and owner here.
+
+  # Keep scheduling preferences: spread instances across nodes (preferred)
+  affinity:
+    additionalPodAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: postgresql.cnpg.io/cluster
+            operator: In
+            values:
+            # Ensure anti-affinity references the same cluster name
+            - postgres-authentik-prod
+        topologyKey: kubernetes.io/hostname
+    nodeSelector:
+      topology.kubernetes.io/region: sg-prod-01
+      node.kubernetes.io/worker: "true"
+
+  # Optional: limit resource requests/limits for each instance
+  resources:
+    requests:
+      memory: "2Gi"
+      cpu: "500m"
+    limits:
+      memory: "4Gi"
+      cpu: "1000m"
+
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: authentik-db-backup-s3
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Pooler
+metadata:
+  name: pooler-authentik-db-rw
+  namespace: databases
+spec:
+  cluster:
+    name: postgres-authentik-prod
+  instances: 1
+  type: rw
+  pgbouncer:
+    poolMode: session
+    parameters:
+      max_client_conn: "500"
+      default_pool_size: "50"
+      reserve_pool_size: "10"
+      reserve_pool_timeout: "5"
+      server_idle_timeout: "0"
+      query_wait_timeout: "60"
+      query_timeout: "0"
+      idle_transaction_timeout: "0"
+  template:
+    spec:
+      containers: []
+      nodeSelector:
+        topology.kubernetes.io/region: sg-prod-01
+        node.kubernetes.io/worker: "true"
+
