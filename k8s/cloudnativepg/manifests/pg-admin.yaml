@@ -61,9 +61,18 @@ spec:
         runAsUser: 5050
         runAsGroup: 5050
         fsGroup: 5050
+      initContainers:
+        - name: fix-volume-permission
+          image: busybox
+          command: ["sh", "-c", "chown -R 5050:5050 /var/lib/pgadmin"]
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+          - name: pgadmin-data
+            mountPath: /var/lib/pgadmin
       containers:
         - name: pg-admin
-          image: dpage/pgadmin4:9.8.0
+          image: dpage/pgadmin4:9.9.0
           ports:
             - containerPort: 80
           volumeMounts:
