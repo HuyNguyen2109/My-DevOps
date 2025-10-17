@@ -1,4 +1,6 @@
 global:
+  image:
+    tag: "2025.8.4"
   nodeSelector:
     node.kubernetes.io/worker: "true"
     topology.kubernetes.io/region: "sg-prod-01"
@@ -30,7 +32,7 @@ global:
           name: authentik-secret-key-eso
           key: authentik-secret-key
     - name: AUTHENTIK_POSTGRESQL__HOST
-      value: "vn2.mcb-svc.work"
+      value: "pooler-authentik-db-rw.databases.svc.cluster.local"
     - name: AUTHENTIK_POSTGRESQL__USER
       value: "authentik_dbadmin"
     - name: AUTHENTIK_POSTGRESQL__NAME
@@ -69,7 +71,7 @@ global:
           name: s3-client-secret-eso
           key: s3-client-secret
     - name: AUTHENTIK_REDIS__HOST
-      value: "vn2.mcb-svc.work"
+      value: "valkey-prod-primary.databases.svc.cluster.local"
     - name: AUTHENTIK_REDIS__PORT
       value: "6379"
     - name: AUTHENTIK_REDIS__PASSWORD
@@ -77,17 +79,21 @@ global:
         secretKeyRef:
           name: redis-auth-eso
           key: valkey-auth-password
+    - name: AUTHENTIK_POSTGRESQL__DISABLE_SERVER_SIDE_CURSORS
+      value: "true"
+    - name: AUTHENTIK_POSTGRESQL__CONN_MAX_AGE
+      value: "300"
   securityContext:
     runAsUser: 1000
     runAsGroup: 1000
     fsGroup: 1000
 
 authentik:
-  log_level: debug
+  log_level: error
   error_reporting:
     enabled: true
-    postgres: {}
-    redis: {}
+  postgresql: {}
+  redis: {}
 
 server:
   replicas: 1
