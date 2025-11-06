@@ -12,8 +12,8 @@ services:
       - source: vault-config
         target: /vault/config/config.hcl
     volumes:
-      - vault-data:/vault/file
-      - vault-logs:/vault/logs
+      - ${MASTER_DATA_FOLDER}/vault/data:/vault/file
+      - ${MASTER_DATA_FOLDER}/vault/logs:/vault/logs
     deploy:
       mode: replicated
       replicas: 1
@@ -45,11 +45,6 @@ services:
 configs:
   vault-config:
     external: true
-volumes:
-  vault-data:
-    driver: local
-  vault-logs:
-    driver: local
 networks:
   traefik-internetwork:
     external: true
