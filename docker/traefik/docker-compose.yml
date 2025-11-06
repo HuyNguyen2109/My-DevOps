@@ -51,8 +51,8 @@ services:
         - "traefik.http.routers.thisproxytls.middlewares=authentik@file"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - traefik-acme:/acme
-      - traefik-logs:/logs
+      - ${MASTER_DATA_FOLDER}/traefik/acme:/acme
+      - ${MASTER_DATA_FOLDER}/traefik/logs:/logs
     configs:
       - source: traefik-middlewares
         target: /etc/traefik/dynamic/middlewares.yaml
@@ -87,12 +87,6 @@ services:
         - traefik.http.services.whoami.loadbalancer.server.port=80
         - traefik.http.services.whoami.loadbalancer.sticky.cookie=true
         - traefik.http.services.whoami.loadbalancer.sticky.cookie.name=whoami_ha
-
-volumes:
-  traefik-acme:
-    driver: local
-  traefik-logs:
-    driver: local
 
 configs:
   traefik-middlewares:

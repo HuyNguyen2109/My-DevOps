@@ -1,18 +1,38 @@
 #!/bin/bash
+# ----------------------
+log() { printf '\033[1;32m[INFO]\033[0m %s\n' "$*"; }
+err() { printf '\033[1;31m[ERROR]\033[0m %s\n' "$*" >&2; }
+warn() { printf '\033[1;33m[WARN]\033[0m %s\n' "$*"; }
+# ----------------------
 # Define stack name (change this as needed)
 STACK_NAME="traefik"
 TRAEFIK_CONFIG_FILE="traefik-config"
 TRAEFIK_MIDDLEWARE_FILE="traefik-middlewares"
 TRAEFIK_FUNNEL_FILE="traefik-funnel"
+MASTER_DATA_FOLDER="/mnt/docker/data"
+REQUIRED_DIRECTORY="traefik"
+SSH_KEY="$HOME/ssh-keys/oracle.key"
+NODE_USER="root"
+NODES=("docker-swarm-manager")
+REQUIRED_SUB_DIR=("acme" "logs")
+
+log "SSH to node to create required sub-directories"
+for NODE in "${NODES[@]}"; do
+  log "🔧 Preparing data folder on $NODE..."
+  for DIR in "${REQUIRED_SUB_DIR[@]}"; do
+    ssh -i $SSH_KEY $NODE_USER@$NODE "sudo mkdir -p $MASTER_DATA_FOLDER/$REQUIRED_DIRECTORY/$DIR && sudo chown docker:docker $MASTER_DATA_FOLDER/$REQUIRED_DIRECTORY/$DIR"
+  done
+done
+
 # === Remove existing Docker services if it exists ===
 docker stack rm "$STACK_NAME" >/dev/null 2>&1 || true
 # === Check if Azure CLI is installed ===
-echo "Checking az cli is installed..."
+log "Checking az cli is installed..."
 if ! command -v az >/dev/null 2>&1; then
-    echo "❌ Azure CLI (az) is not installed. Please install it first: https://learn.microsoft.com/en-us/cli/azure/install-azure-cli"
+    err "❌ Azure CLI (az) is not installed. Please install it first: https://learn.microsoft.com/en-us/cli/azure/install-azure-cli"
     exit 1
 fi
-echo "Checking Azure credentials for Azure Key Vault on host machine..."
+log "Checking Azure credentials for Azure Key Vault on host machine..."
 REQUIRED_VARS=(
   AZURE_CLIENT_ID
   AZURE_CLIENT_SECRET
@@ -22,23 +42,25 @@ REQUIRED_VARS=(
 )
 for VAR in "${REQUIRED_VARS[@]}"; do
   if [ -z "${!VAR}" ]; then
-    echo "❌ Environment variable '$VAR' is not set or is empty."
+    err "❌ Environment variable '$VAR' is not set or is empty."
     exit 1
   fi
 done
 # === Get secrets from Vault ===
-echo "🔐 Fetching secrets from Vault..."
+log "🔐 Fetching secrets from Vault..."
 export CF_API_EMAIL="JohnasHuy21091996@gmail.com"
 export CF_API_KEY=$(az keyvault secret show --vault-name "$AZURE_VAULT_NAME" --name "cloudflare-api-key" --query "value" -o tsv)
 export PUBLIC_IP=$(curl -s ifconfig.me)
 export ROOT_DOMAIN="mcb-svc.work"
 export TRAEFIK_URL="sg.mcb-svc.work"
 export IMAGE_TAG="v3.5.0-rc1"
+export MASTER_DATA_FOLDER=$MASTER_DATA_FOLDER
 # === Create Docker Config via STDIN ===
-echo "Parsing all necessary variables into config..."
+log "Parsing all necessary variables into config..."
 docker config rm $TRAEFIK_CONFIG_FILE > /dev/null 2>&1 || true
 docker config rm $TRAEFIK_MIDDLEWARE_FILE > /dev/null 2>&1 || true
-cat <<EOF | docker config create $TRAEFIK_CONFIG_FILE -
+docker config rm $TRAEFIK_FUNNEL_FILE > /dev/null 2>&1 || true
+cat <<EOF | docker config create $TRAEFIK_CONFIG_FILE - > /dev/null 2>&1 || true
 global:
   checkNewVersion: true
 
@@ -105,7 +127,7 @@ metrics:
       label: traefik-prod-sg
 EOF
 
-cat <<EOF | docker config create $TRAEFIK_MIDDLEWARE_FILE -
+cat <<EOF | docker config create $TRAEFIK_MIDDLEWARE_FILE - > /dev/null 2>&1 || true
 http:
   middlewares:
     authentik:
@@ -127,7 +149,7 @@ http:
           - X-authentik-meta-version
 EOF
 
-cat <<EOF | docker config create $TRAEFIK_FUNNEL_FILE -
+cat <<EOF | docker config create $TRAEFIK_FUNNEL_FILE - > /dev/null 2>&1 || true
 http:
   routers:
     proxmox:
@@ -148,5 +170,5 @@ http:
       insecureSkipVerify: true
 EOF
 # Deploy the stack
-docker stack deploy -c docker-compose.yml "$STACK_NAME"
-echo "✅ Docker stack '$STACK_NAME' deployed successfully!"
+docker stack deploy -c docker-compose.yml "$STACK_NAME" --detach > /dev/null 2>&1 || true
+log "✅ Docker stack '$STACK_NAME' deployed successfully!"
