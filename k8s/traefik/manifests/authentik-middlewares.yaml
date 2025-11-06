@@ -20,3 +20,7 @@ spec:
             - X-authentik-meta-provider
             - X-authentik-meta-app
             - X-authentik-meta-version
+        additionalHeaders:
+            - X-Forwarded-Host
+            - X-Forwarded-Proto
+            - X-Forwarded-Uri

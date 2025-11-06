@@ -1,10 +1,9 @@
 global:
   nodeSelector:
     node.kubernetes.io/worker: "true"
-    topology.kubernetes.io/region: "sg-prod-01"
 
 networkPolicies:
-  enabled: true
+  enabled: false
   type: "k3s"
 
 service:
@@ -13,7 +12,7 @@ service:
   manager:
     type: ClusterIP
 longhornUI:
-  replicas: 2
+  replicas: 1
   affinity:
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
@@ -26,6 +25,14 @@ longhornUI:
                   values:
                     - longhorn-ui
             topologyKey: kubernetes.io/hostname
+  nodeSelector:
+    node-role.kubernetes.io/control-plane: "true"
+  tolerations:
+  - key: "CriticalAddonsOnly"
+    operator: "Equal"
+    value: "true"
+    effect: "NoExecute"
+
 defaultSettings:
   defaultDataPath: "/var/lib/longhorn"
   deletingConfirmationFlag: "true"
@@ -33,7 +40,7 @@ defaultSettings:
 enablePSP: false
 
 persistence:
-  defaultClassReplicaCount: 2
+  defaultClassReplicaCount: 4
   reclaimPolicy: "Retain"
   migratable: true
 

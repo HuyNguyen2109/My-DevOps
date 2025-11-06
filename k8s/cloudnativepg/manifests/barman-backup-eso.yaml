@@ -1,0 +1,23 @@
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: cpng-barman-backup-eso
+  namespace: databases
+spec:
+  refreshInterval: 24h
+  secretStoreRef:
+    name: vault-backend
+    kind: ClusterSecretStore
+  target:
+    name: cpng-barman-backup-eso
+    creationPolicy: Owner
+  data:
+    - secretKey: ACCESS_KEY_ID
+      remoteRef:
+        key: docker-secrets
+        property: s3-client-id
+    - secretKey: ACCESS_SECRET_KEY
+      remoteRef:
+        key: docker-secrets
+        property: s3-client-secret
+---

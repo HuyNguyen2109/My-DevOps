@@ -1,7 +1,7 @@
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
-  name: authentik-db-user-secret-eso
+  name: harbor-db-user-secret-eso
   namespace: databases
 spec:
   refreshInterval: 24h
@@ -9,7 +9,7 @@ spec:
     name: vault-backend
     kind: ClusterSecretStore
   target:
-    name: authentik-db-user-secret-eso
+    name: harbor-db-user-secret-eso
     creationPolicy: Owner
     template:
       type: kubernetes.io/basic-auth
@@ -26,11 +26,11 @@ spec:
 apiVersion: postgresql.cnpg.io/v1
 kind: ScheduledBackup
 metadata:
-  name: postgres-authentik-prod-backup
+  name: postgres-harbor-prod-backup
   namespace: databases
 spec:
   cluster:
-    name: postgres-authentik-prod
+    name: harbor-authentik-prod
   schedule: '0 */15 0 * * *'
   backupOwnerReference: self
   method: plugin
@@ -40,7 +40,7 @@ spec:
 apiVersion: barmancloud.cnpg.io/v1
 kind: ObjectStore
 metadata:
-  name: authentik-db-backup-s3
+  name: harbor-db-backup-s3
   namespace: databases
 spec:
   configuration:
@@ -66,12 +66,12 @@ spec:
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
-  name: postgres-authentik-prod
+  name: postgres-harbor-prod
   namespace: databases
 spec:
   # Start instances immediately (override operator default startDelay)
   startDelay: 0
-  instances: 4
+  instances: 2
   imageName: "ghcr.io/cloudnative-pg/postgresql:17-minimal-bullseye"
   primaryUpdateStrategy: unsupervised
 
@@ -121,16 +121,16 @@ spec:
       - "host all all 0.0.0.0/0 scram-sha-256"
   bootstrap:
     initdb:
-      database: authentik-prd
-      owner: authentik_dbadmin
+      database: harbor
+      owner: harbor_dbadmin
       # Use the existing basic-auth secret to set the owner's password during initdb
       secret:
-        name: authentik-db-user-secret-eso
+        name: harbor-db-user-secret-eso
       # Run SQL after initialization to set role options (SUPERUSER, CREATEDB, CREATEROLE)
       postInitSQL:
-        - ALTER ROLE authentik_dbadmin WITH SUPERUSER;
-        - ALTER ROLE authentik_dbadmin WITH CREATEDB;
-        - ALTER ROLE authentik_dbadmin WITH CREATEROLE;
+        - ALTER ROLE harbor_dbadmin WITH SUPERUSER;
+        - ALTER ROLE harbor_dbadmin WITH CREATEDB;
+        - ALTER ROLE harbor_dbadmin WITH CREATEROLE;
     # Note: CloudNativePG Cluster CRD v1 does not accept a `users` field here.
     # To create additional DB roles at bootstrap, use `postInitSQL`/`postInitSQLRefs`
     # or managed roles if supported by your operator version. Kept only initdb
@@ -146,34 +146,35 @@ spec:
             operator: In
             values:
             # Ensure anti-affinity references the same cluster name
-            - postgres-authentik-prod
+            - postgres-harbor-prod
         topologyKey: kubernetes.io/hostname
     nodeSelector:
       node.kubernetes.io/worker: "true"
+      topology.kubernetes.io/region: sg-prod-01
 
   # Optional: limit resource requests/limits for each instance
   resources:
     requests:
+      memory: "1Gi"
+      cpu: "125m"
+    limits:
       memory: "2Gi"
       cpu: "250m"
-    limits:
-      memory: "4Gi"
-      cpu: "500m"
 
   plugins:
     - name: barman-cloud.cloudnative-pg.io
       isWALArchiver: true
       parameters:
-        barmanObjectName: authentik-db-backup-s3
+        barmanObjectName: harbor-db-backup-s3
 ---
 apiVersion: postgresql.cnpg.io/v1
 kind: Pooler
 metadata:
-  name: pooler-authentik-db-rw
+  name: pooler-harbor-db-rw
   namespace: databases
 spec:
   cluster:
-    name: postgres-authentik-prod
+    name: postgres-harbor-prod
   instances: 1
   type: rw
   pgbouncer:
@@ -192,32 +193,5 @@ spec:
       containers: []
       nodeSelector:
         topology.kubernetes.io/region: sg-prod-01
-        node.kubernetes.io/worker: "true"
-
-apiVersion: postgresql.cnpg.io/v1
-kind: Pooler
-metadata:
-  name: pooler-authentik-db-ro
-  namespace: databases
-spec:
-  cluster:
-    name: postgres-authentik-prod
-  instances: 4
-  type: ro
-  pgbouncer:
-    poolMode: transaction
-    parameters:
-      max_client_conn: "500"
-      default_pool_size: "50"
-      reserve_pool_size: "10"
-      reserve_pool_timeout: "5"
-      server_idle_timeout: "0"
-      query_wait_timeout: "60"
-      query_timeout: "0"
-      idle_transaction_timeout: "0"
-  template:
-    spec:
-      containers: []
-      nodeSelector:
         node.kubernetes.io/worker: "true"
 

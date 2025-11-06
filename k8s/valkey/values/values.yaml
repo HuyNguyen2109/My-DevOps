@@ -483,12 +483,12 @@ primary:
   ## @param primary.initContainers Add additional init containers to the Valkey primary pod(s)
   ## ref: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
   ## Example:
-  ## initContainers:
-  ##  - name: your-image-name
-  ##    image: your-image
-  ##    imagePullPolicy: Always
-  ##    command: ['sh', '-c', 'echo "hello world"']
-  ##
+  # initContainers:
+  #  - name: your-image-name
+  #    image: your-image
+  #    imagePullPolicy: Always
+  #    command: ['sh', '-c', 'echo "hello world"']
+  #
   initContainers: []
   ## Persistence parameters
   ## ref: https://kubernetes.io/docs/concepts/storage/persistent-volumes/
@@ -664,7 +664,7 @@ replica:
   kind: StatefulSet
   ## @param replica.replicaCount Number of Valkey replicas to deploy
   ##
-  replicaCount: 1
+  replicaCount: 4
   ## @param replica.configuration Configuration for Valkey replicas nodes
   ## ref: https://valkey.io/topics/config
   ##
@@ -910,7 +910,6 @@ replica:
   ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
   ##
   nodeSelector:
-    topology.kubernetes.io/region: sg-prod-01
     node.kubernetes.io/worker: "true"
   ## @param replica.tolerations Tolerations for Valkey replicas pods assignment
   ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
@@ -1188,7 +1187,7 @@ sentinel:
   ## IMPORTANT: this will disable the primary and replicas services and
   ## create a single Valkey service exposing both the Valkey and Sentinel ports
   ##
-  enabled: false
+  enabled: true
   ## Bitnami Valkey Sentinel image version
   ## ref: https://hub.docker.com/r/bitnami/valkey-sentinel/tags/
   ## @param sentinel.image.registry [default: REGISTRY_NAME] Valkey Sentinel image registry
@@ -1224,10 +1223,10 @@ sentinel:
   annotations: {}
   ## @param sentinel.primarySet Primary set name
   ##
-  primarySet: myprimary
+  primarySet: valkey-prod
   ## @param sentinel.quorum Sentinel Quorum
   ##
-  quorum: 2
+  quorum: 4
   ## @param sentinel.getPrimaryTimeout Amount of time to allow before get_sentinel_primary_info() times out.
   ##
   getPrimaryTimeout: 90
@@ -1247,7 +1246,7 @@ sentinel:
   failoverTimeout: 180000
   ## @param sentinel.parallelSyncs Number of replicas that can be reconfigured in parallel to use the new primary after the failover
   ##
-  parallelSyncs: 1
+  parallelSyncs: 2
   ## @param sentinel.configuration Configuration for Valkey Sentinel nodes
   ## ref: https://valkey.io/topics/sentinel
   ##
@@ -1348,7 +1347,7 @@ sentinel:
   persistence:
     ## @param sentinel.persistence.enabled Enable persistence on Valkey sentinel nodes using Persistent Volume Claims (Experimental)
     ##
-    enabled: false
+    enabled: true
     ## @param sentinel.persistence.storageClass Persistent Volume storage class
     ## If defined, storageClassName: <storageClass>
     ## If set to "-", storageClassName: "", which disables dynamic provisioning
@@ -1391,15 +1390,15 @@ sentinel:
   ## @param sentinel.persistentVolumeClaimRetentionPolicy.whenDeleted Volume retention behavior that applies when the StatefulSet is deleted
   ##
   persistentVolumeClaimRetentionPolicy:
-    enabled: false
+    enabled: true
     whenScaled: Retain
-    whenDeleted: Retain
+    whenDeleted: Delete
   ## Valkey Sentinel resource requests and limits
   ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
   ## @param sentinel.resourcesPreset Set container resources according to one common preset (allowed values: none, nano, micro, small, medium, large, xlarge, 2xlarge). This is ignored if sentinel.resources is set (sentinel.resources is recommended for production).
   ## More information: https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15
   ##
-  resourcesPreset: "nano"
+  ## resourcesPreset: "nano"
   ## @param sentinel.resources Set container requests and limits for different resources like CPU or memory (essential for production workloads)
   ## Example:
   ## resources:
@@ -1410,7 +1409,13 @@ sentinel:
   ##     cpu: 3
   ##     memory: 1024Mi
   ##
-  resources: {}
+  resources: 
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "200m"
+      memory: "256Mi"
   ## Configure Container Security Context
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
   ## @param sentinel.containerSecurityContext.enabled Enable Valkey Sentinel containers' Security Context
@@ -2047,7 +2052,7 @@ metrics:
 volumePermissions:
   ## @param volumePermissions.enabled Enable init container that changes the owner/group of the PV mount point to `runAsUser:fsGroup`
   ##
-  enabled: false
+  enabled: true
   ## OS Shell + Utility image
   ## ref: https://hub.docker.com/r/bitnami/os-shell/tags/
   ## @param volumePermissions.image.registry [default: REGISTRY_NAME] OS Shell + Utility image registry
@@ -2087,7 +2092,15 @@ volumePermissions:
   ##     cpu: 3
   ##     memory: 1024Mi
   ##
-  resources: {}
+  resources:
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 1
+        memory: 1024Mi
+  
   ## Init container Security Context
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
   ## @param volumePermissions.containerSecurityContext.seLinuxOptions [object,nullable] Set SELinux options in container

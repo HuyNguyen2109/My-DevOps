@@ -1,0 +1,90 @@
+# ----------------------------------------------------------------------
+# Kubernetes Descheduler Helm Chart Configuration
+# Version: v0.33.0
+# ----------------------------------------------------------------------
+
+replicaCount: 5
+
+image:
+  repository: registry.k8s.io/descheduler/descheduler
+  tag: v0.33.0
+  pullPolicy: IfNotPresent
+
+# ----------------------------------------------------------------------
+# Descheduler Policy Reference
+# ----------------------------------------------------------------------
+
+deschedulerPolicy:
+  profiles:
+    - name: "region-failback"
+      pluginConfig:
+        - name: RemovePodsViolatingNodeAffinity
+          args:
+            nodeAffinityType:
+              - requiredDuringSchedulingIgnoredDuringExecution
+        - name: RemovePodsViolatingNodeTaints
+      plugins:
+        deschedule:
+          enabled:
+            - RemovePodsViolatingNodeAffinity
+            - RemovePodsViolatingNodeTaints
+
+# How often the Descheduler runs and evaluates nodes
+deschedulingInterval: 2m
+
+# Enable leader election (recommended for HA clusters)
+leaderElection:
+  enabled: true
+
+# ----------------------------------------------------------------------
+# Scheduler Pod placement configuration
+# ----------------------------------------------------------------------
+
+tolerations:
+  - key: "node-role.kubernetes.io/control-plane"
+    effect: "NoSchedule"
+    operator: "Exists"
+  - key: "node-role.kubernetes.io/master"
+    effect: "NoSchedule"
+    operator: "Exists"
+
+affinity:
+  nodeAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 50
+        preference:
+          matchExpressions:
+            - key: topology.kubernetes.io/region
+              operator: In
+              values:
+                - sg-prod-01
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: topology.kubernetes.io/region
+              operator: In
+              values:
+                - vn-prod-01
+
+# ----------------------------------------------------------------------
+# Metrics and Service Account Configuration
+# ----------------------------------------------------------------------
+
+metrics:
+  enabled: true
+  port: 9121
+
+serviceAccount:
+  create: true
+  name: descheduler
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 300m
+    memory: 256Mi
+
+rbac:
+  create: true
