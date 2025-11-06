@@ -273,6 +273,10 @@ EOF
   esac
 fi
 
+log "Create Docker location for persistent data"
+mkdir -p /mnt/docker/{data,secrets}
+chown -R "$TARGET_USER:$TARGET_USER" /mnt/docker/*
+
 cat <<EOF
 
 SUCCESS:
