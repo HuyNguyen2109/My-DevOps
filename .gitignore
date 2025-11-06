@@ -3,6 +3,7 @@
 # Local Terraform state
 *.tfstate
 *.tfstate.*
+*.img
 
 # Crash logs
 crash.log
@@ -16,7 +17,7 @@ override.tf.json
 
 # Terraform plan output
 *.tfplan
-/terraform/proxmox-provision/assets
+/terraform/*/assets
 
 # Sensitive files
 secrets.auto.tfvars
