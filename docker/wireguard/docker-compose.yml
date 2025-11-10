@@ -39,14 +39,19 @@ services:
     networks:
       - traefik-internetwork
     ports:
-        - target: 51820
-          published: 51820
-          protocol: udp
-          mode: host
+    # Note that the port for UI only open behind the Tailscale/Netbird
+      - target: 51821
+        published: 3333
+        protocol: tcp
+        mode: host
+      - target: 51820
+        published: 51821
+        protocol: udp
+        mode: host
     deploy:
       placement:
         constraints:
-          - node.role == manager
+          - node.labels.database == master
       mode: replicated
       replicas: 1
       labels:
@@ -55,7 +60,7 @@ services:
         - "traefik.http.routers.wireguard-http.entrypoints=web"
         - "traefik.http.routers.wireguard-http.rule=Host(`wg.mcb-svc.work`)"
         - "traefik.http.routers.wireguard-http.middlewares=wireguard-https"
-        - "traefik.http.routers.wireguard-http.service=wireguard"
+        - "traefik.http.routers.wireguard-http.service=wireguard_core"
         - "traefik.http.services.wireguard.loadbalancer.server.port=51821"
         - "traefik.http.middlewares.wireguard-https.redirectscheme.scheme=https"
         - "traefik.http.routers.wireguard.entrypoints=websecure"
