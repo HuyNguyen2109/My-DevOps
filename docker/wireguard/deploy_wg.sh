@@ -27,7 +27,7 @@ for VAR in "${REQUIRED_VARS[@]}"; do
 done
 # === Env ===
 export PASSWORD=$(vault kv get -field=grafana-admin-password kubernetes/docker-secrets)
-export WG_HOST="wg.mcb-svc.work"
+export WG_HOST=$(curl -s ifconfig.me)
 # Deploy the stack
 docker stack deploy -c docker-compose.yml "$STACK_NAME" > /dev/null 2>&1 || true
 log "✅ Docker stack '$STACK_NAME' deployed successfully!"

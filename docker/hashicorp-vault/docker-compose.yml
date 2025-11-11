@@ -33,8 +33,7 @@ services:
         # condition: on-failure
       placement:
         constraints:
-          - node.platform.os == linux
-          - node.labels.type == constructor
+          - node.role == manager
       labels:
         - "traefik.enable=true"
         - "traefik.http.routers.vault.rule=Host(`${VAULT_URL}`)"

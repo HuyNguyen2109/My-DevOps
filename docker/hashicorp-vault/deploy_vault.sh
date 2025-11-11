@@ -8,11 +8,10 @@ warn() { printf '\033[1;33m[WARN]\033[0m %s\n' "$*"; }
 STACK_NAME="hashicorp"
 CONFIG_FILE="vault-config"
 MASTER_DATA_FOLDER="/mnt/docker/data"
-MASTER_DATA_FOLDER="/mnt/docker/data"
 REQUIRED_DIRECTORY="vault"
 SSH_KEY="$HOME/ssh-keys/oracle.key"
 NODE_USER="root"
-NODES=("docker-swarm-worker1")
+NODES=("docker-swarm-manager")
 REQUIRED_SUB_DIR=("data" "logs")
 
 log "SSH to node to create required sub-directories"
@@ -50,6 +49,7 @@ log "🔐 Fetching secrets from Azure Key Vault..."
 PG_CONNECTION_STRING=$(az keyvault secret show --vault-name "$AZURE_VAULT_NAME" --name "connection-string" --query "value" -o tsv)
 export VAULT_URL="vault.mcb-svc.work"
 export IMAGE_TAG="1.21.0"
+export MASTER_DATA_FOLDER=$MASTER_DATA_FOLDER
 # === Create Docker Config via STDIN ===
 log "Parsing all necessary variables into config..."
 docker config rm $CONFIG_FILE > /dev/null 2>&1 || true
@@ -75,5 +75,5 @@ seal "azurekeyvault" {
 }
 EOF
 # Deploy the stack
-docker stack deploy -c docker-compose.yml "$STACK_NAME" --detach > /dev/null 2>&1 || true
+docker stack deploy -c docker-compose.yml "$STACK_NAME" --detach
 log "✅ Docker stack '$STACK_NAME' deployed successfully!"

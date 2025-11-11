@@ -27,6 +27,7 @@ services:
       - PASSWORD=${PASSWORD}
       - WG_POST_UP=iptables -A FORWARD -i %i -j ACCEPT; iptables -t nat -A POSTROUTING -j MASQUERADE; iptables -A FORWARD -o %i -j ACCEPT
       - WG_POST_DOWN=iptables -D FORWARD -i %i -j ACCEPT; iptables -t nat -D POSTROUTING -j MASQUERADE; iptables -D FORWARD -o %i -j ACCEPT
+      - WG_MTU=1280
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
