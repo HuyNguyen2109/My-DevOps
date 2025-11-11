@@ -9,7 +9,7 @@ STACK_NAME="portainer-prd"
 MASTER_DATA_FOLDER="/mnt/docker/data"
 REQUIRED_DIRECTORY="portainer"
 SSH_KEY="$HOME/ssh-keys/oracle.key"
-NODE_USER="ubuntu"
+NODE_USER="root"
 NODES=("docker-swarm-manager")
 
 log "SSH to node to create required sub-directories"
@@ -21,7 +21,7 @@ done
 # === Remove existing Docker services if it exists ===
 docker stack rm "$STACK_NAME" >/dev/null 2>&1 || true
 export UI_URL="docker-ui.mcb-svc.work"
-export IMAGE_TAG="2.33.3-alpine"
+export IMAGE_TAG="2.35.0-alpine"
 # Deploy the stack
-docker stack deploy -c docker-compose.yml "$STACK_NAME"
+docker stack deploy -c docker-compose.yml "$STACK_NAME" --detach
 log "✅ Docker stack '$STACK_NAME' deployed successfully!"

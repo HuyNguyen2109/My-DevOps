@@ -24,9 +24,10 @@ services:
       - /etc/localtime:/etc/localtime
       - portainer-data:/data
     ports:
+    # Make this accessible within Netbird/Tailscale network
       - published: 9000
         target: 9000
-        mode: host
+        mode: ingress
     deploy:
       restart_policy:
         condition: any
