@@ -1,0 +1,39 @@
+services:
+  server:
+    image: ghcr.io/lukegus/termix:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - ${MASTER_DATA_FOLDER}/termix:/app/data
+    networks:
+      - traefik-internetwork
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: "128M"
+        reservations:
+          cpus: "0.1"
+          memory: "64M"
+      restart_policy:
+        condition: any
+      # labels:
+        # # Label for Shepherd service for autoupdate
+        # - "shepherd.enable=true"
+        # - "service.autodeploy=true"
+        # # Traefik Labels
+        # - traefik.enable=true
+        # - traefik.http.routers.termix.rule=Host(`${TERMIX_URL}`)
+        # - traefik.http.routers.termix.entrypoints=websecure
+        # - traefik.http.routers.termix.tls.certresolver=letsencrypt
+        # - traefik.http.services.termix.loadbalancer.server.port=8080
+    environment:
+      PORT: "8080"
+
+networks:
+  traefik-internetwork:
+    external: true
