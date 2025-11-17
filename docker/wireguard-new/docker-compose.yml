@@ -8,7 +8,7 @@ volumes:
 
 services:
   core:
-    image: ghcr.io/wg-easy/wg-easy:13
+    image: ghcr.io/wg-easy/wg-easy:15.1
     volumes:
       - wireguard-data:/etc/wireguard
       - /lib/modules:/lib/modules:ro
@@ -25,7 +25,8 @@ services:
     #  WG_POST_DOWN=iptables -D FORWARD -i %i -j ACCEPT; iptables -t nat -D POSTROUTING -j MASQUERADE; iptables -D FORWARD -o %i -j ACCEPT
       - INSECURE=true
       - DISABLE_IPV6=true
-      - WG_HOST=${WG_HOST}
+      - INIT_HOST=${WG_HOST}
+      - INIT_IPV4_CIDR=10.123.0.0/14
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
@@ -38,26 +39,30 @@ services:
     networks:
       - traefik-internetwork
     ports:
+        - target: 51821
+          published: 8081
+          protocol: tcp
+          mode: ingress
         - target: 51820
-          published: 51820
+          published: 51822
           protocol: udp
           mode: host
     deploy:
       placement:
         constraints:
-          - node.role == manager
+          - node.labels.database == master
       mode: replicated
       replicas: 1
-      labels:
-        - "traefik.enable=true"
-        - "traefik.swarm.network=traefik-internetwork"
-        - "traefik.http.routers.wireguard-http.entrypoints=web"
-        - "traefik.http.routers.wireguard-http.rule=Host(`wg.mcb-svc.work`)"
-        - "traefik.http.routers.wireguard-http.middlewares=wireguard-https"
-        - "traefik.http.routers.wireguard-http.service=wireguard"
-        - "traefik.http.services.wireguard.loadbalancer.server.port=51821"
-        - "traefik.http.middlewares.wireguard-https.redirectscheme.scheme=https"
-        - "traefik.http.routers.wireguard.entrypoints=websecure"
-        - "traefik.http.routers.wireguard.rule=Host(`wg.mcb-svc.work`)"
-        - "traefik.http.routers.wireguard.tls=true"
-        - "traefik.http.routers.wireguard.tls.certresolver=letsencrypt"
+      # labels:
+      #   - "traefik.enable=true"
+      #   - "traefik.swarm.network=traefik-internetwork"
+      #   - "traefik.http.routers.wireguard-http.entrypoints=web"
+      #   - "traefik.http.routers.wireguard-http.rule=Host(`wg.mcb-svc.work`)"
+      #   - "traefik.http.routers.wireguard-http.middlewares=wireguard-https"
+      #   - "traefik.http.routers.wireguard-http.service=wireguard"
+      #   - "traefik.http.services.wireguard.loadbalancer.server.port=51821"
+      #   - "traefik.http.middlewares.wireguard-https.redirectscheme.scheme=https"
+      #   - "traefik.http.routers.wireguard.entrypoints=websecure"
+      #   - "traefik.http.routers.wireguard.rule=Host(`wg.mcb-svc.work`)"
+      #   - "traefik.http.routers.wireguard.tls=true"
+      #   - "traefik.http.routers.wireguard.tls.certresolver=letsencrypt"

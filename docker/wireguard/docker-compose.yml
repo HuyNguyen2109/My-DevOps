@@ -44,7 +44,7 @@ services:
       - target: 51821
         published: 3333
         protocol: tcp
-        mode: host
+        mode: ingress
       - target: 51820
         published: 51821
         protocol: udp
