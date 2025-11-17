@@ -3,6 +3,7 @@ services:
     image: "ubuntu/nginx:1.24-24.04_beta"
     networks:
       - traefik-internetwork
+      - db-internetwork
     volumes:
       - ubuntu-data:/data
       - /var/run/docker.sock:/var/run/docker.sock:ro
