@@ -52,8 +52,8 @@ export CF_API_EMAIL="JohnasHuy21091996@gmail.com"
 export CF_API_KEY=$(az keyvault secret show --vault-name "$AZURE_VAULT_NAME" --name "cloudflare-api-key" --query "value" -o tsv)
 export PUBLIC_IP=$(curl -s ifconfig.me)
 export ROOT_DOMAIN="mcb-svc.work"
-export TRAEFIK_URL="sg.mcb-svc.work"
-export IMAGE_TAG="v3.5.0-rc1"
+export TRAEFIK_URL="vn.mcb-svc.work"
+export IMAGE_TAG="v3.6.0"
 export MASTER_DATA_FOLDER=$MASTER_DATA_FOLDER
 # === Create Docker Config via STDIN ===
 log "Parsing all necessary variables into config..."
@@ -170,5 +170,5 @@ http:
       insecureSkipVerify: true
 EOF
 # Deploy the stack
-docker stack deploy -c docker-compose.yml "$STACK_NAME" --detach > /dev/null 2>&1 || true
+docker stack deploy -c docker-compose.yml "$STACK_NAME" --detach
 log "✅ Docker stack '$STACK_NAME' deployed successfully!"
