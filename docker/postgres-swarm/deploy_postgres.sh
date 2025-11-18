@@ -35,7 +35,7 @@ for VAR in "${REQUIRED_VARS[@]}"; do
   fi
 done
 # Load environment variables from .env file
-export IMAGE_TAG="latest"
+export IMAGE_TAG="17.6.0"
 export MASTER_DATA_FOLDER=$MASTER_DATA_FOLDER
 export REPLICATION_USER="repl-admin"
 

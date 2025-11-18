@@ -7,6 +7,7 @@ services:
       - postgres-ca-pem
     volumes:
       - pg-certs-master:/opt/bitnami/postgresql/certs
+      - pg-data-master:/bitnami/postgresql
     command: 
       - /bin/bash
       - -c
@@ -15,7 +16,8 @@ services:
         cp /run/secrets/postgres-key-pem  /opt/bitnami/postgresql/certs/server.key && \
         cp /run/secrets/postgres-ca-pem   /opt/bitnami/postgresql/certs/ca.crt && \
         chown 1001:1001 /opt/bitnami/postgresql/certs/server.* && \
-        chmod 600 /opt/bitnami/postgresql/certs/server.key
+        chmod 600 /opt/bitnami/postgresql/certs/server.key && \
+        chown -R 1001:1001 /bitnami/postgresql
     deploy:
       mode: replicated
       replicas: 1
@@ -35,6 +37,7 @@ services:
       - postgres-ca-pem
     volumes:
       - pg-certs-slave:/opt/bitnami/postgresql/certs
+      - pg-data-slave:/bitnami/postgresql
     command: 
       - /bin/bash
       - -c
@@ -43,7 +46,8 @@ services:
         cp /run/secrets/postgres-key-pem  /opt/bitnami/postgresql/certs/server.key && \
         cp /run/secrets/postgres-ca-pem   /opt/bitnami/postgresql/certs/ca.crt && \
         chown 1001:1001 /opt/bitnami/postgresql/certs/server.* && \
-        chmod 600 /opt/bitnami/postgresql/certs/server.key
+        chmod 600 /opt/bitnami/postgresql/certs/server.key && \
+        chown -R 1001:1001 /bitnami/postgresql
     deploy:
       mode: replicated
       replicas: 1
@@ -56,9 +60,9 @@ services:
       - db-internetwork
 
   postgresql-master:
-    image: bitnami/postgresql:${IMAGE_TAG}
+    image: bitnamilegacy/postgresql:${IMAGE_TAG}
     depends_on:
-      - postgres-init
+      - postgres-init-master
     secrets:
       - postgres-root-password
     volumes:
@@ -113,7 +117,7 @@ services:
       - POSTGRESQL_PGHBA_FILE=/bitnami/postgresql/conf/pg_hba.conf
   
   postgresql-slave:
-    image: bitnami/postgresql:${IMAGE_TAG}
+    image: bitnamilegacy/postgresql:${IMAGE_TAG}
     volumes:
       - pg-data-slave:/bitnami/postgresql
       - pg-certs-slave:/opt/bitnami/postgresql/certs
@@ -126,6 +130,7 @@ services:
       - db-internetwork
     depends_on:
       - postgresql-master
+      - postgres-init-slave
     deploy:
       mode: replicated
       replicas: 1
