@@ -10,9 +10,17 @@ CONFIG_FILE="vault-config"
 MASTER_DATA_FOLDER="/mnt/docker/data"
 REQUIRED_DIRECTORY="vault"
 SSH_KEY="$HOME/ssh-keys/oracle.key"
-NODE_USER="root"
-NODES=("docker-swarm-manager")
+NODE_USER="ubuntu"
 REQUIRED_SUB_DIR=("data" "logs")
+DESIGNATED_NODE=$SWARM_WORKER_SG_HOSTNAME
+
+# Check if node hostname variable is set before proceeding
+if [ -z "$DESIGNATED_NODE" ]; then
+  err "❌ SWARM_WORKER_SG_HOSTNAME environment variable is not set or is empty."
+  exit 1
+fi
+
+NODES=($DESIGNATED_NODE)
 
 log "SSH to node to create required sub-directories"
 for NODE in "${NODES[@]}"; do
@@ -50,30 +58,19 @@ PG_CONNECTION_STRING=$(az keyvault secret show --vault-name "$AZURE_VAULT_NAME" 
 export VAULT_URL="vault.mcb-svc.work"
 export IMAGE_TAG="1.21.0"
 export MASTER_DATA_FOLDER=$MASTER_DATA_FOLDER
+export SWARM_NODE_CODENAME="beta"
 # === Create Docker Config via STDIN ===
 log "Parsing all necessary variables into config..."
 docker config rm $CONFIG_FILE > /dev/null 2>&1 || true
-cat <<EOF | docker config create $CONFIG_FILE - > /dev/null 2>&1 || true
-ui = true
-disable_mlock = true
 
-storage "postgresql" {
-  connection_url = "$PG_CONNECTION_STRING"
-}
+# Read from external HCL file and substitute variables
+sed -e "s|{{PG_CONNECTION_STRING}}|$PG_CONNECTION_STRING|g" \
+    -e "s|{{AZURE_TENANT_ID}}|$AZURE_TENANT_ID|g" \
+    -e "s|{{AZURE_CLIENT_ID}}|$AZURE_CLIENT_ID|g" \
+    -e "s|{{AZURE_CLIENT_SECRET}}|$AZURE_CLIENT_SECRET|g" \
+    -e "s|{{AZURE_VAULT_NAME}}|$AZURE_VAULT_NAME|g" \
+    vault-config.hcl | docker config create $CONFIG_FILE - > /dev/null 2>&1 || true
 
-listener "tcp" {
-  address = "0.0.0.0:8200"
-  tls_disable = 1
-}
-
-seal "azurekeyvault" {
-  tenant_id      = "$AZURE_TENANT_ID"
-  client_id      = "$AZURE_CLIENT_ID"
-  client_secret  = "$AZURE_CLIENT_SECRET"
-  vault_name     = "$AZURE_VAULT_NAME"
-  key_name       = "unseal-key-hcl"
-}
-EOF
 # Deploy the stack
 docker stack deploy -c docker-compose.yml "$STACK_NAME" --detach
 log "✅ Docker stack '$STACK_NAME' deployed successfully!"

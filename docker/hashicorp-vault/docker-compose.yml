@@ -33,14 +33,8 @@ services:
         # condition: on-failure
       placement:
         constraints:
-          - node.role == manager
-      labels:
-        - "traefik.enable=true"
-        - "traefik.http.routers.vault.rule=Host(`${VAULT_URL}`)"
-        - "traefik.http.routers.vault.entrypoints=websecure"
-        - "traefik.http.routers.vault.tls.certresolver=letsencrypt"
-        - "traefik.http.services.vault.loadbalancer.server.port=8200"
-        - "traefik.http.services.vault.loadbalancer.server.scheme=http"
+          - node.role == worker
+          - node.labels.codename == ${SWARM_NODE_CODENAME}
 configs:
   vault-config:
     external: true
