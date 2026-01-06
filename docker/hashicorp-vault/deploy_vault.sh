@@ -9,24 +9,83 @@ STACK_NAME="hashicorp"
 CONFIG_FILE="vault-config"
 MASTER_DATA_FOLDER="/mnt/docker/data"
 REQUIRED_DIRECTORY="vault"
-SSH_KEY="$HOME/ssh-keys/oracle.key"
-NODE_USER="ubuntu"
 REQUIRED_SUB_DIR=("data" "logs")
-DESIGNATED_NODE=$SWARM_WORKER_SG_HOSTNAME
 
-# Check if node hostname variable is set before proceeding
-if [ -z "$DESIGNATED_NODE" ]; then
-  err "❌ SWARM_WORKER_SG_HOSTNAME environment variable is not set or is empty."
+# === Parse command-line arguments ===
+SWARM_NODE_CODENAME=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --node|--codename|-n)
+      SWARM_NODE_CODENAME="$2"
+      shift 2
+      ;;
+    -h|--help)
+      log "Usage: $0 --node <SWARM_NODE_CODENAME>"
+      log "Options:"
+      log "  --node, --codename, -n    Specify the node codename (alpha, beta, gamma)"
+      log "  -h, --help                Show this help message"
+      log ""
+      log "Example: $0 --node gamma"
+      exit 0
+      ;;
+    *)
+      err "❌ Unknown option: $1"
+      err "Use --help for usage information"
+      exit 1
+      ;;
+  esac
+done
+
+if [ -z "$SWARM_NODE_CODENAME" ]; then
+  err "❌ SWARM_NODE_CODENAME is required."
+  err "Usage: $0 --node <SWARM_NODE_CODENAME>"
+  err "Example: $0 --node gamma"
   exit 1
 fi
 
-NODES=($DESIGNATED_NODE)
+log "🎯 Deploying to node codename: $SWARM_NODE_CODENAME"
+
+# === Set node-specific configuration based on codename ===
+case "$SWARM_NODE_CODENAME" in
+  alpha)
+    SSH_KEY="$HOME/ssh-keys/oracle.key"
+    NODE_USER="root"
+    NODES=($SWARM_MANAGER_HOSTNAME)
+    ;;
+  beta)
+    SSH_KEY="$HOME/ssh-keys/oracle.key"
+    NODE_USER="root"
+    NODES=($SWARM_WORKER_VN_HOSTNAME)
+    ;;
+  gamma)
+    SSH_KEY="$HOME/ssh-keys/oracle.key"
+    NODE_USER="ubuntu"
+    NODES=($SWARM_WORKER_SG_HOSTNAME)
+    ;;
+  *)
+    err "❌ Unknown SWARM_NODE_CODENAME: $SWARM_NODE_CODENAME"
+    err "Valid options: alpha, beta, gamma"
+    exit 1
+    ;;
+esac
+
+# Validate that NODES array is populated
+if [ ${#NODES[@]} -eq 0 ]; then
+  err "❌ NODES array is empty. Please ensure the environment variable for the selected node is set."
+  exit 1
+fi
 
 log "SSH to node to create required sub-directories"
 for NODE in "${NODES[@]}"; do
   log "🔧 Preparing data folder on $NODE..."
   for DIR in "${REQUIRED_SUB_DIR[@]}"; do
-    ssh -i $SSH_KEY $NODE_USER@$NODE "sudo mkdir -p $MASTER_DATA_FOLDER/$REQUIRED_DIRECTORY/$DIR && sudo chown docker:docker $MASTER_DATA_FOLDER/$REQUIRED_DIRECTORY/$DIR"
+    if ssh -i $SSH_KEY $NODE_USER@$NODE "[ -d $MASTER_DATA_FOLDER/$REQUIRED_DIRECTORY/$DIR ]"; then
+      log "  ✓ Directory $DIR already exists, skipping..."
+    else
+      log "  📁 Creating directory $DIR..."
+      ssh -i $SSH_KEY $NODE_USER@$NODE "sudo mkdir -p $MASTER_DATA_FOLDER/$REQUIRED_DIRECTORY/$DIR && sudo chown docker:docker $MASTER_DATA_FOLDER/$REQUIRED_DIRECTORY/$DIR"
+    fi
   done
 done
 # === Remove existing Docker services if it exists ===
@@ -58,7 +117,7 @@ PG_CONNECTION_STRING=$(az keyvault secret show --vault-name "$AZURE_VAULT_NAME" 
 export VAULT_URL="vault.mcb-svc.work"
 export IMAGE_TAG="1.21.0"
 export MASTER_DATA_FOLDER=$MASTER_DATA_FOLDER
-export SWARM_NODE_CODENAME="beta"
+export SWARM_NODE_CODENAME
 # === Create Docker Config via STDIN ===
 log "Parsing all necessary variables into config..."
 docker config rm $CONFIG_FILE > /dev/null 2>&1 || true

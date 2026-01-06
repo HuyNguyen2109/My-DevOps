@@ -12,6 +12,9 @@ services:
       - published: 9000
         target: 9000
         mode: host
+      - published: 7080
+        target: 7080
+        mode: host
     deploy:
       mode: replicated
       replicas: 1

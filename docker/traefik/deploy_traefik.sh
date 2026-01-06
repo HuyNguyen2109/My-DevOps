@@ -8,10 +8,66 @@ warn() { printf '\033[1;33m[WARN]\033[0m %s\n' "$*"; }
 STACK_NAME="traefik"
 MASTER_DATA_FOLDER="/mnt/docker/data"
 REQUIRED_DIRECTORY="traefik"
-SSH_KEY="$HOME/ssh-keys/oracle.key"
-NODE_USER="root"
-NODES=($SWARM_MANAGER_HOSTNAME)
 REQUIRED_SUB_DIR=("acme" "logs" "dynamic")
+
+# === Parse command-line arguments ===
+SWARM_NODE_CODENAME=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --node|--codename|-n)
+      SWARM_NODE_CODENAME="$2"
+      shift 2
+      ;;
+    -h|--help)
+      log "Usage: $0 --node <SWARM_NODE_CODENAME>"
+      log "Options:"
+      log "  --node, --codename, -n    Specify the node codename (alpha, beta, gamma)"
+      log "  -h, --help                Show this help message"
+      log ""
+      log "Example: $0 --node alpha"
+      exit 0
+      ;;
+    *)
+      err "❌ Unknown option: $1"
+      err "Use --help for usage information"
+      exit 1
+      ;;
+  esac
+done
+
+if [ -z "$SWARM_NODE_CODENAME" ]; then
+  err "❌ SWARM_NODE_CODENAME is required."
+  err "Usage: $0 --node <SWARM_NODE_CODENAME>"
+  err "Example: $0 --node alpha"
+  exit 1
+fi
+
+log "🎯 Deploying to node codename: $SWARM_NODE_CODENAME"
+
+# === Set node-specific configuration based on codename ===
+case "$SWARM_NODE_CODENAME" in
+  alpha)
+    SSH_KEY="$HOME/ssh-keys/oracle.key"
+    NODE_USER="root"
+    NODES=($SWARM_MANAGER_HOSTNAME)
+    ;;
+  beta)
+    SSH_KEY="$HOME/ssh-keys/oracle.key"
+    NODE_USER="root"
+    NODES=($SWARM_WORKER_VN_HOSTNAME)
+    ;;
+  gamma)
+    SSH_KEY="$HOME/ssh-keys/oracle.key"
+    NODE_USER="ubuntu"
+    NODES=($SWARM_WORKER_SG_HOSTNAME)
+    ;;
+  *)
+    err "❌ Unknown SWARM_NODE_CODENAME: $SWARM_NODE_CODENAME"
+    err "Valid options: alpha, beta, gamma"
+    exit 1
+    ;;
+esac
 
 log "SSH to node to create required sub-directories"
 for NODE in "${NODES[@]}"; do
@@ -54,7 +110,7 @@ export CF_API_EMAIL="JohnasHuy21091996@gmail.com"
 export CF_API_KEY=$(az keyvault secret show --vault-name "$AZURE_VAULT_NAME" --name "cloudflare-api-key" --query "value" -o tsv)
 export IMAGE_TAG="v3.6.5"
 export MASTER_DATA_FOLDER=$MASTER_DATA_FOLDER
-export SWARM_NODE_CODENAME="alpha"
+export SWARM_NODE_CODENAME
 # Deploy the stack
 docker stack deploy -c docker-compose.yml "$STACK_NAME" --detach
 log "✅ Docker stack '$STACK_NAME' deployed successfully!"
