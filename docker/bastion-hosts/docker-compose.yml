@@ -5,7 +5,8 @@ services:
       - traefik-internetwork
       - db-internetwork
     volumes:
-      - ubuntu-data:/data
+      - ubuntu-data:/var
+      - ubuntu-packages:/usr
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /var/lib/docker/volumes:/mnt/docker/volumes:rw
     deploy:
@@ -35,4 +36,6 @@ networks:
 
 volumes:
   ubuntu-data:
+    driver: local
+  ubuntu-packages:
     driver: local

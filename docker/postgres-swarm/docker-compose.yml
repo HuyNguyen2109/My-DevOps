@@ -1,84 +1,17 @@
 services:
-  postgres-init-master:
-    image: bitnami/minideb:latest
-    secrets:
-      - postgres-cert-pem
-      - postgres-key-pem
-      - postgres-ca-pem
-    volumes:
-      - pg-certs-master:/opt/bitnami/postgresql/certs
-      - pg-data-master:/bitnami/postgresql
-    command: 
-      - /bin/bash
-      - -c
-      - |
-        cp /run/secrets/postgres-cert-pem /opt/bitnami/postgresql/certs/server.crt && \
-        cp /run/secrets/postgres-key-pem  /opt/bitnami/postgresql/certs/server.key && \
-        cp /run/secrets/postgres-ca-pem   /opt/bitnami/postgresql/certs/ca.crt && \
-        chown 1001:1001 /opt/bitnami/postgresql/certs/server.* && \
-        chmod 600 /opt/bitnami/postgresql/certs/server.key && \
-        chown -R 1001:1001 /bitnami/postgresql
-    deploy:
-      mode: replicated
-      replicas: 1
-      restart_policy:
-        condition: none
-      placement:
-        constraints:
-          - node.labels.database == master
-    networks:
-      - db-internetwork
-
-  postgres-init-slave:
-    image: bitnami/minideb:latest
-    secrets:
-      - postgres-cert-pem
-      - postgres-key-pem
-      - postgres-ca-pem
-    volumes:
-      - pg-certs-slave:/opt/bitnami/postgresql/certs
-      - pg-data-slave:/bitnami/postgresql
-    command: 
-      - /bin/bash
-      - -c
-      - |
-        cp /run/secrets/postgres-cert-pem /opt/bitnami/postgresql/certs/server.crt && \
-        cp /run/secrets/postgres-key-pem  /opt/bitnami/postgresql/certs/server.key && \
-        cp /run/secrets/postgres-ca-pem   /opt/bitnami/postgresql/certs/ca.crt && \
-        chown 1001:1001 /opt/bitnami/postgresql/certs/server.* && \
-        chmod 600 /opt/bitnami/postgresql/certs/server.key && \
-        chown -R 1001:1001 /bitnami/postgresql
-    deploy:
-      mode: replicated
-      replicas: 1
-      restart_policy:
-        condition: none
-      placement:
-        constraints:
-          - node.labels.database == slave
-    networks:
-      - db-internetwork
-
-  postgresql-master:
-    image: bitnamilegacy/postgresql:${IMAGE_TAG}
-    depends_on:
-      - postgres-init-master
+  postgres:
+    image: postgres:${IMAGE_TAG:-17}
     secrets:
       - postgres-root-password
     volumes:
-      - pg-data-master:/bitnami/postgresql
-      - pg-certs-master:/opt/bitnami/postgresql/certs
+      - ${MASTER_DATA_FOLDER}/postgres:/var/lib/postgresql/data
     configs:
       - source: postgres-extended-conf
-        target: /bitnami/postgresql/conf/conf.d/extended.conf
+        target: /etc/postgresql/conf.d/extended.conf
       - source: pg-hba-conf
-        target: /bitnami/postgresql/conf/pg_hba.conf
-    ports:
-    # IMPORTANT: Only expose this port to Netbird/Tailscale only
-      - 15432:5432
+        target: /etc/postgresql/pg_hba.conf
     networks:
       - db-internetwork
-      - traefik-internetwork
     deploy:
       update_config:
         parallelism: 1
@@ -88,77 +21,65 @@ services:
         condition: any
       resources:
         limits:
-          cpus: "3"   
+          cpus: "3"
           memory: "16G"
         reservations:
-          cpus: "0.125"
+          cpus: "0.25"
           memory: "4G"
       mode: replicated
       replicas: 1
       placement:
         constraints:
           - node.labels.database == master
-      labels:
-        - "traefik.enable=true"
-        - "traefik.tcp.routers.postgres.rule=HostSNI(`*`)"
-        - "traefik.tcp.routers.postgres.entrypoints=postgres"
-        - "traefik.tcp.services.postgres.loadbalancer.server.port=5432"
+          - node.labels.codename == ${SWARM_NODE_CODENAME}
     environment:
-      - POSTGRESQL_REPLICATION_MODE=master
-      - POSTGRESQL_REPLICATION_USER=${REPLICATION_USER}
-      - POSTGRESQL_REPLICATION_PASSWORD_FILE=/run/secrets/postgres-root-password
-      - POSTGRESQL_PASSWORD_FILE=/run/secrets/postgres-root-password
-      - POSTGRESQL_SYNCHRONOUS_COMMIT_MODE=on
-      - POSTGRESQL_NUM_SYNCHRONOUS_REPLICAS=1
-      - POSTGRESQL_TLS_CERT_FILE=/opt/bitnami/postgresql/certs/server.crt
-      - POSTGRESQL_TLS_KEY_FILE=/opt/bitnami/postgresql/certs/server.key
-      - POSTGRESQL_TLS_CA_FILE=/opt/bitnami/postgresql/certs/ca.crt
-      - POSTGRESQL_TLS_ENABLED=yes
-      - POSTGRESQL_PGHBA_FILE=/bitnami/postgresql/conf/pg_hba.conf
-  
-  postgresql-slave:
-    image: bitnamilegacy/postgresql:${IMAGE_TAG}
-    volumes:
-      - pg-data-slave:/bitnami/postgresql
-      - pg-certs-slave:/opt/bitnami/postgresql/certs
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres-root-password
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=postgres
+      - POSTGRES_HOST_AUTH_METHOD=md5
+      - POSTGRES_INITDB_ARGS=--auth-host=md5 --auth-local=md5
+    command:
+      - postgres
+      - -c
+      - config_file=/etc/postgresql/conf.d/extended.conf
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  pgbouncer:
+    image: edoburu/pgbouncer:${PGBOUNCER_TAG:-latest}
     configs:
-      - source: postgres-extended-conf-slave
-        target: /bitnami/postgresql/conf/conf.d/extended.conf
-      - source: pg-hba-conf
-        target: /bitnami/postgresql/conf/pg_hba.conf
+      - source: pgbouncer-ini
+        target: /etc/pgbouncer/pgbouncer.ini
+      - source: pgbouncer-userlist
+        target: /etc/pgbouncer/userlist.txt
     networks:
       - db-internetwork
-    depends_on:
-      - postgresql-master
-      - postgres-init-slave
+      - traefik-internetwork
     deploy:
-      mode: replicated
       replicas: 1
+      restart_policy:
+        condition: on-failure
       placement:
         constraints:
-          - node.labels.database == slave
-      update_config:
-        parallelism: 1
-        delay: 5s
-        failure_action: rollback
-      restart_policy:
-        condition: any
-      resources:
-        limits:
-          cpus: "0.75"   
-          memory: "2G"  
-        reservations:
-          cpus: "0.125"
-          memory: "512M"
-    secrets:
-      - postgres-root-password
-    environment:
-      - POSTGRESQL_REPLICATION_MODE=slave
-      - POSTGRESQL_REPLICATION_USER=${REPLICATION_USER}
-      - POSTGRESQL_REPLICATION_PASSWORD_FILE=/run/secrets/postgres-root-password
-      - POSTGRESQL_MASTER_HOST=postgresql-master
-      - POSTGRESQL_PASSWORD_FILE=/run/secrets/postgres-root-password
-      - POSTGRESQL_MASTER_PORT_NUMBER=5432
+          - node.role == manager
+      labels:
+        - traefik.enable=true
+        - traefik.tcp.routers.pgbouncer.rule=HostSNI(`*`)
+        - traefik.tcp.routers.pgbouncer.entrypoints=pgbouncer
+        - traefik.tcp.routers.pgbouncer.service=pgbouncer-svc
+        - traefik.tcp.services.pgbouncer-svc.loadbalancer.server.port=5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U postgres || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 networks:
   db-internetwork:
@@ -169,27 +90,13 @@ networks:
 secrets:
   postgres-root-password:
     external: true
-  postgres-cert-pem:
-    external: true
-  postgres-key-pem:
-    external: true
-  postgres-ca-pem:
-    external: true
 
 configs:
   postgres-extended-conf:
     external: true
-  postgres-extended-conf-slave:
-    external: true
   pg-hba-conf:
     external: true
-
-volumes:
-  pg-certs-master:
-    driver: local
-  pg-certs-slave:
-    driver: local
-  pg-data-master:
-    driver: local
-  pg-data-slave:
-    driver: local
+  pgbouncer-ini:
+    external: true
+  pgbouncer-userlist:
+    external: true

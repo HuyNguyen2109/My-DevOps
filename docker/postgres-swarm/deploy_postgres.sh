@@ -4,26 +4,102 @@ log() { printf '\033[1;32m[INFO]\033[0m %s\n' "$*"; }
 err() { printf '\033[1;31m[ERROR]\033[0m %s\n' "$*" >&2; }
 warn() { printf '\033[1;33m[WARN]\033[0m %s\n' "$*"; }
 # ----------------------
-# Define stack name (change this as needed)
 STACK_NAME="postgres-cluster"
 POSTGRES_EXTENDED_CONF="postgres-extended-conf"
-POSTGRES_EXTENDED_CONF_SLAVE="postgres-extended-conf-slave"
-POSTGRES_CERT_PEM="postgres-cert-pem"
-POSTGRES_KEY_PEM="postgres-key-pem"
-POSTGRES_CA_PEM="postgres-ca-pem"
 POSTGRES_HBA_FILE="pg-hba-conf"
-# === Remove existing Docker services if it exists ===
+PGBOUNCER_INI="pgbouncer-ini"
+PGBOUNCER_USERLIST="pgbouncer-userlist"
+MASTER_DATA_FOLDER="/mnt/docker/data"
+REQUIRED_DIRECTORY="postgres"
+
+# === Parse command-line arguments ===
+SWARM_NODE_CODENAME=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --node|--codename|-n)
+      SWARM_NODE_CODENAME="$2"
+      shift 2
+      ;;
+    -h|--help)
+      log "Usage: $0 --node <SWARM_NODE_CODENAME>"
+      log "Options:"
+      log "  --node, --codename, -n    Specify the node codename (alpha, beta, gamma)"
+      log "  -h, --help                Show this help message"
+      log ""
+      log "Example: $0 --node alpha"
+      exit 0
+      ;;
+    *)
+      err "❌ Unknown option: $1"
+      err "Use --help for usage information"
+      exit 1
+      ;;
+  esac
+done
+
+if [ -z "$SWARM_NODE_CODENAME" ]; then
+  err "❌ SWARM_NODE_CODENAME is required."
+  err "Usage: $0 --node <SWARM_NODE_CODENAME>"
+  err "Example: $0 --node alpha"
+  exit 1
+fi
+
+log "🎯 Deploying to node codename: $SWARM_NODE_CODENAME"
+
+# === Set node-specific configuration based on codename ===
+case "$SWARM_NODE_CODENAME" in
+  alpha)
+    SSH_KEY="$HOME/ssh-keys/oracle.key"
+    NODE_USER="root"
+    NODES=($SWARM_MANAGER_HOSTNAME)
+    ;;
+  beta)
+    SSH_KEY="$HOME/ssh-keys/oracle.key"
+    NODE_USER="root"
+    NODES=($SWARM_WORKER_VN_HOSTNAME)
+    ;;
+  gamma)
+    SSH_KEY="$HOME/ssh-keys/oracle.key"
+    NODE_USER="ubuntu"
+    NODES=($SWARM_WORKER_SG_HOSTNAME)
+    ;;
+  *)
+    err "❌ Unknown SWARM_NODE_CODENAME: $SWARM_NODE_CODENAME"
+    err "Valid options: alpha, beta, gamma"
+    exit 1
+    ;;
+esac
+
+# Validate that NODES array is populated
+if [ ${#NODES[@]} -eq 0 ]; then
+  err "❌ NODES array is empty. Please ensure the environment variable for the selected node is set."
+  exit 1
+fi
+
+log "SSH to node to create required sub-directories"
+for NODE in "${NODES[@]}"; do
+  log "🔧 Preparing data folder on $NODE..."
+  if ssh -i $SSH_KEY $NODE_USER@$NODE "[ -d $MASTER_DATA_FOLDER/$REQUIRED_DIRECTORY ]"; then
+    log "  ✓ Directory $REQUIRED_DIRECTORY already exists, skipping..."
+  else
+    log "  📁 Creating directory $REQUIRED_DIRECTORY..."
+    ssh -i $SSH_KEY $NODE_USER@$NODE "sudo mkdir -p $MASTER_DATA_FOLDER/$REQUIRED_DIRECTORY && sudo chown docker:docker $MASTER_DATA_FOLDER/$REQUIRED_DIRECTORY"
+  fi
+done
+
+# === Remove existing Docker stack ===
 docker stack rm "$STACK_NAME" >/dev/null 2>&1 || true
-docker secret rm $POSTGRES_CERT_PEM >/dev/null 2>&1 || true
-docker secret rm $POSTGRES_KEY_PEM >/dev/null 2>&1 || true
-docker secret rm $POSTGRES_CA_PEM >/dev/null 2>&1 || true
+sleep 5
+
 # === Check if Vault CLI is installed ===
 log "Checking vault cli is installed..."
 if ! command -v vault >/dev/null 2>&1; then
     err "❌ Vault CLI is not installed!"
     exit 1
 fi
-log "Checking Vault credentials for Vault..."
+
+log "Checking Vault credentials..."
 REQUIRED_VARS=(
   VAULT_ADDR
   VAULT_TOKEN
@@ -34,44 +110,58 @@ for VAR in "${REQUIRED_VARS[@]}"; do
     exit 1
   fi
 done
-# Load environment variables from .env file
-export IMAGE_TAG="17.6.0"
+
+# === Get secrets from Vault ===
+log "🔐 Fetching secrets from Vault..."
+POSTGRES_PASSWORD=$(vault kv get -field=postgres-root-password kubernetes/docker-secrets)
+
+# === Create Docker Secret ===
+log "Creating Docker secrets..."
+docker secret rm postgres-root-password >/dev/null 2>&1 || true
+echo -n "$POSTGRES_PASSWORD" | docker secret create postgres-root-password - >/dev/null 2>&1 || true
+
+# === Export environment variables ===
+export IMAGE_TAG="17-alpine3.23"
+export PGBOUNCER_TAG="latest"
 export MASTER_DATA_FOLDER=$MASTER_DATA_FOLDER
-export REPLICATION_USER="repl-admin"
+export SWARM_NODE_CODENAME=$SWARM_NODE_CODENAME
 
-CLOUDFLARE_PEM=$(vault kv get -field=cloudflare-cert-pem-b64 kubernetes/terraform)
-echo "$CLOUDFLARE_PEM" | base64 --decode | docker secret create $POSTGRES_CERT_PEM -
-
-CLOUDFLARE_KEY=$(vault kv get -field=cloudflare-key-pem-b64 kubernetes/terraform)
-echo "$CLOUDFLARE_KEY" | base64 --decode | docker secret create $POSTGRES_KEY_PEM -
-
-CLOUDFLARE_CA=$(vault kv get -field=cloudflare-origin-ca-pem-b64 kubernetes/terraform)
-echo "$CLOUDFLARE_CA" | base64 --decode | docker secret create $POSTGRES_CA_PEM -
-# === Create Docker Config via STDIN ===
-log "Parsing all necessary variables into config..."
+# === Create Docker Configs ===
+log "Creating Docker configs..."
 docker config rm $POSTGRES_EXTENDED_CONF >/dev/null 2>&1 || true
 docker config rm $POSTGRES_HBA_FILE >/dev/null 2>&1 || true
-docker config rm $POSTGRES_EXTENDED_CONF_SLAVE >/dev/null 2>&1 || true
+docker config rm $PGBOUNCER_INI >/dev/null 2>&1 || true
+docker config rm $PGBOUNCER_USERLIST >/dev/null 2>&1 || true
+
+# PostgreSQL extended configuration
 cat <<EOF | docker config create $POSTGRES_EXTENDED_CONF - >/dev/null 2>&1 || true
+############################################
+# CONNECTIONS AND AUTHENTICATION
+############################################
+listen_addresses = '*'
+port = 5432
+max_connections = 200
+
 ############################################
 # Memory & Cache
 ############################################
-shared_buffers = 5GB                  # ~25% of total RAM
-effective_cache_size = 13GB           # ~75% of total RAM
-work_mem = 16MB                       # per operation; safe for 4 cores
-maintenance_work_mem = 512MB          # for VACUUM/CREATE INDEX
+shared_buffers = 6GB
+effective_cache_size = 18GB
+work_mem = 64MB
+maintenance_work_mem = 1GB
 
 ############################################
 # WAL & Checkpoints
 ############################################
 wal_level = replica
 wal_compression = on
-max_wal_size = 4GB
-min_wal_size = 1GB
-checkpoint_timeout = 5min
-checkpoint_completion_target = 0.7
-archive_mode = off                    # unless using WAL archiving
-synchronous_commit = on               # use 'off' for latency-sensitive apps
+max_wal_size = 8GB
+min_wal_size = 2GB
+checkpoint_timeout = 10min
+checkpoint_completion_target = 0.9
+archive_mode = off
+synchronous_commit = on
+wal_buffers = 64MB
 
 ############################################
 # Autovacuum & Analyze
@@ -93,92 +183,72 @@ max_worker_processes = 8
 parallel_leader_participation = on
 
 ############################################
-# Connections & Pooling
-############################################
-max_connections = 200                 # use PgBouncer for more
-superuser_reserved_connections = 3
-shared_preload_libraries = 'pg_stat_statements'
-track_activity_query_size = 4096
-pg_stat_statements.max = 10000
-
-############################################
-# Performance & Planner
-############################################
-random_page_cost = 1.1
-seq_page_cost = 1.0
-effective_io_concurrency = 200        # good for fast OCI block storage
-default_statistics_target = 100
-
-############################################
 # Logging
 ############################################
-log_min_duration_statement = 500ms
+log_destination = 'stderr'
+logging_collector = on
+log_directory = 'log'
+log_filename = 'postgresql-%Y-%m-%d.log'
+log_rotation_age = 1d
+log_rotation_size = 100MB
+log_min_duration_statement = 1000
 log_checkpoints = on
-log_autovacuum_min_duration = 1000
-log_line_prefix = '%t [%p] %q%u@%d '
-log_error_verbosity = default
-
-############################################
-# Background Writer
-############################################
-bgwriter_lru_maxpages = 1000
-bgwriter_lru_multiplier = 4.0
-bgwriter_delay = 10ms
-
-############################################
-# SSL enforcement
-############################################
-ssl = on
-ssl_cert_file = '/opt/bitnami/postgresql/certs/server.crt'
-ssl_key_file  = '/opt/bitnami/postgresql/certs/server.key'
-ssl_ca_file   = '/opt/bitnami/postgresql/certs/ca.crt'
+log_connections = on
+log_disconnections = on
+log_lock_waits = on
+log_temp_files = 0
 EOF
 
-cat <<EOF | docker config create $POSTGRES_EXTENDED_CONF_SLAVE - >/dev/null 2>&1 || true
-############################################
-# CONNECTIONS AND AUTHENTICATION
-############################################
-listen_addresses = '*'                   # Listen on all interfaces
-port = 5432
-max_connections = 200
-superuser_reserved_connections = 3
-############################################
-# SSL enforcement
-############################################
-ssl = on
-ssl_cert_file = '/opt/bitnami/postgresql/certs/server.crt'
-ssl_key_file  = '/opt/bitnami/postgresql/certs/server.key'
-ssl_ca_file   = '/opt/bitnami/postgresql/certs/ca.crt'
-EOF
-
+# PostgreSQL pg_hba.conf
 cat <<EOF | docker config create $POSTGRES_HBA_FILE - >/dev/null 2>&1 || true
-# ============================================================================
-# PostgreSQL Client Authentication Configuration
-# ============================================================================
-# TYPE   DATABASE        USER           ADDRESS               METHOD    OPTIONS
-# ----------------------------------------------------------------------------
-# 1. Allow local Unix socket connections (no SSL)
-local   all             all                                  trust
-
-# 2. Allow internal Docker Swarm network (no SSL)
-# Replace 10.0.0.0/8 with your Swarm network CIDRs if more restrictive
-hostnossl all           all           11.0.3.0/24            md5
-hostnossl all           all           10.128.0.0/24          md5
-hostnossl all           all           172.16.0.0/12          md5
-hostnossl all           all           192.168.0.0/16         md5
-hostssl   replication   repl-admin    11.0.3.0/24            md5
-# Allow Netbird network (no SSL)
-hostnossl all           all           100.64.0.0/10          md5
-
-# 3. Require SSL for any other (public) connections
-hostssl   all           all           0.0.0.0/0              md5
-hostssl   all           all           ::/0                   md5
-
-# 4. Reject non-SSL connections from outside internal networks
-hostnossl all           all           0.0.0.0/0              reject
-hostnossl all           all           ::/0                   reject
-
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
+local   all             all                                     md5
+host    all             all             127.0.0.1/32            md5
+host    all             all             ::1/128                 md5
+host    all             all             0.0.0.0/0               md5
+host    all             all             ::/0                    md5
+host    replication     all             0.0.0.0/0               md5
 EOF
+
+# PgBouncer configuration (edoburu/pgbouncer image)
+cat <<EOF | docker config create $PGBOUNCER_INI - >/dev/null 2>&1 || true
+[databases]
+* = host=postgres port=5432
+
+[pgbouncer]
+listen_addr = 0.0.0.0
+listen_port = 5432
+auth_type = md5
+auth_file = /etc/pgbouncer/userlist.txt
+admin_users = postgres
+stats_users = postgres
+pool_mode = transaction
+max_client_conn = 2000
+default_pool_size = 50
+min_pool_size = 10
+reserve_pool_size = 10
+reserve_pool_timeout = 5
+server_lifetime = 3600
+server_idle_timeout = 600
+server_connect_timeout = 15
+server_login_retry = 5
+query_timeout = 300
+query_wait_timeout = 120
+client_idle_timeout = 0
+ignore_startup_parameters = extra_float_digits
+log_connections = 1
+log_disconnections = 1
+log_pooler_errors = 1
+EOF
+
+# PgBouncer userlist (MD5 hash format: "user" "md5<hash>")
+# Generate MD5 hash: echo -n "password<username>" | md5sum
+POSTGRES_MD5=$(echo -n "${POSTGRES_PASSWORD}postgres" | md5sum | awk '{print $1}')
+cat <<EOF | docker config create $PGBOUNCER_USERLIST - >/dev/null 2>&1 || true
+"postgres" "md5${POSTGRES_MD5}"
+EOF
+
 # Deploy the stack
-docker stack deploy -c docker-compose.yml "$STACK_NAME" --detach
+log "🚀 Deploying stack..."
+docker stack deploy -c docker-compose.yml "$STACK_NAME" --detach > /dev/null 2>&1 || true
 log "✅ Docker stack '$STACK_NAME' deployed successfully!"
