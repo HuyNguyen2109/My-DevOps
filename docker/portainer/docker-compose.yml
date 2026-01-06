@@ -34,9 +34,6 @@ services:
       placement:
         constraints:
           - node.role == manager
-      labels:
-        # Frontend
-        - "traefik.enable=true"
 
 volumes:
   portainer-data:
