@@ -234,9 +234,9 @@ else
       WORKER_TOKEN=$(docker swarm join-token worker -q)
 
       log "Initializing Docker user-defined ingress network..."
-      docker network create --driver overlay --subnet=10.128.0.0/24 --gateway=10.128.0.1 --opt com.docker.network.driver.mtu=1200 --opt com.docker.network.endpoint.ifname=eth0 --attachable traefik-internetwork
-      docker network create --driver overlay --subnet=10.129.0.0/24 --gateway=10.129.0.1 --opt com.docker.network.driver.mtu=1200 --opt com.docker.network.endpoint.ifname=eth0 --attachable db-internetwork
-      docker network create --driver overlay --subnet=10.130.0.0/24 --gateway=10.130.0.1 --opt com.docker.network.driver.mtu=1200 --opt com.docker.network.endpoint.ifname=eth0 --attachable vpn-internetwork
+      docker network create --driver overlay --subnet=11.128.0.0/24 --gateway=11.128.0.1 --opt com.docker.network.driver.mtu=1300 --attachable traefik-internetwork
+      docker network create --driver overlay --subnet=11.129.0.0/24 --gateway=11.129.0.1 --opt com.docker.network.driver.mtu=1300 --attachable db-internetwork
+      docker network create --driver overlay --subnet=11.130.0.0/24 --gateway=11.130.0.1 --opt com.docker.network.driver.mtu=1300 --attachable vpn-internetwork
       cat <<EOF
 
 SUCCESS: Docker Swarm bootstrapped!

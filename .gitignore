@@ -39,3 +39,6 @@ id_rsa.pub
 
 # Optional: OS-specific files
 Thumbs.db
+
+# Some specific files
+.default-*.txt

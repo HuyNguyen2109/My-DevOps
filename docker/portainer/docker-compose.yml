@@ -5,7 +5,7 @@ services:
       AGENT_CLUSTER_ADDR: tasks.agent
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /var/lib/docker/volumes:/var/lib/docker/volumes
+      - /:/host
     networks:
       - traefik-internetwork
     deploy:
@@ -21,13 +21,7 @@ services:
       - traefik-internetwork
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /etc/localtime:/etc/localtime
       - portainer-data:/data
-    ports:
-    # Make this accessible within Netbird/Tailscale network
-      - published: 9000
-        target: 9000
-        mode: ingress
     deploy:
       restart_policy:
         condition: any
@@ -41,18 +35,8 @@ services:
         constraints:
           - node.role == manager
       labels:
-        # Label for Shepherd service for autoupdate
-        - "shepherd.enable=true"
-        - "service.autodeploy=true"
         # Frontend
         - "traefik.enable=true"
-        - "traefik.http.routers.portainer.rule=Host(`${UI_URL}`)"
-        - "traefik.http.routers.portainer.entrypoints=websecure"
-        - "traefik.http.services.portainer.loadbalancer.server.port=9000"
-        - "traefik.http.routers.portainer.service=portainer"
-        - "traefik.http.routers.portainer.tls.certresolver=letsencrypt"
-        - "traefik.http.services.portainer.loadbalancer.sticky.cookie=true"
-        - "traefik.http.services.portainer.loadbalancer.sticky.cookie.name=portainer_ha"
 
 volumes:
   portainer-data:
