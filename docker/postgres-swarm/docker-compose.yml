@@ -1,5 +1,5 @@
 services:
-  postgres:
+  main_database:
     image: postgres:${IMAGE_TAG:-17}
     secrets:
       - postgres-root-password
@@ -11,7 +11,9 @@ services:
       - source: pg-hba-conf
         target: /etc/postgresql/pg_hba.conf
     networks:
-      - db-internetwork
+      db-internetwork:
+        aliases:
+          - postgres
     deploy:
       update_config:
         parallelism: 1
@@ -68,18 +70,48 @@ services:
       placement:
         constraints:
           - node.role == manager
-      labels:
-        - traefik.enable=true
-        - traefik.tcp.routers.pgbouncer.rule=HostSNI(`*`)
-        - traefik.tcp.routers.pgbouncer.entrypoints=pgbouncer
-        - traefik.tcp.routers.pgbouncer.service=pgbouncer-svc
-        - traefik.tcp.services.pgbouncer-svc.loadbalancer.server.port=5432
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U postgres || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
+
+  db_management_tool:
+    image: dpage/pgadmin4:${PGADMIN_TAG:-latest}
+    secrets:
+      - pgadmin-default-password
+    networks:
+      traefik-internetwork:
+        aliases:
+          - pgadmin
+      db-internetwork: {}
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
+      - PGADMIN_DEFAULT_PASSWORD_FILE=/run/secrets/pgadmin-default-password
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - pgadmin_configs:/pgadmin4
+    deploy:
+      update_config:
+        parallelism: 1
+        delay: 5s
+        failure_action: rollback
+      restart_policy:
+        condition: any
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: "512M"
+        reservations:
+          cpus: "0.25"
+          memory: "125M"
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.database != master
+          - node.role != manager
 
 networks:
   db-internetwork:
@@ -89,6 +121,8 @@ networks:
 
 secrets:
   postgres-root-password:
+    external: true
+  pgadmin-default-password:
     external: true
 
 configs:
@@ -100,3 +134,9 @@ configs:
     external: true
   pgbouncer-userlist:
     external: true
+
+volumes:
+  pgadmin_data:
+    driver: local
+  pgadmin_configs:
+    driver: local

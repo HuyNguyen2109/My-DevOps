@@ -125,6 +125,7 @@ export IMAGE_TAG="17-alpine3.23"
 export PGBOUNCER_TAG="latest"
 export MASTER_DATA_FOLDER=$MASTER_DATA_FOLDER
 export SWARM_NODE_CODENAME=$SWARM_NODE_CODENAME
+export PGADMIN_DEFAULT_EMAIL="JohnasHuy21091996@gmail.com"
 
 # === Create Docker Configs ===
 log "Creating Docker configs..."

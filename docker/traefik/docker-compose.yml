@@ -15,6 +15,12 @@ services:
       - published: 7080
         target: 7080
         mode: host
+      - published: 5432
+        target: 5432
+        mode: host
+      - published: 3000
+        target: 3000
+        mode: host
     deploy:
       mode: replicated
       replicas: 1
