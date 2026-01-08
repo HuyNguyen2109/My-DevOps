@@ -1,26 +1,59 @@
 services:
-  traefik:
+  main:
     image: traefik:${IMAGE_TAG}
+    cap_add:
+      - NET_ADMIN
     networks:
-      - traefik-internetwork
+      traefik-internetwork:
+        aliases:
+          - traefik
     ports:
-      - 80:80
-      - 443:443
-      - published: 8088
-        target: 8088
+      - target: 80
+        published: 80
         mode: host
-      - published: 9000
-        target: 9000
+      - target: 443
+        published: 443
         mode: host
-      - published: 7080
-        target: 7080
+      - target: 8088
+        published: 8088
         mode: host
-      - published: 5432
-        target: 5432
+      - target: 9000
+        published: 9000
         mode: host
-      - published: 3000
-        target: 3000
+      - target: 7080
+        published: 7080
         mode: host
+      - target: 5432
+        published: 5432
+        mode: host
+      - target: 3000
+        published: 3000
+        mode: host
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        # Route homelab LAN traffic through Docker host gateway
+        # The host has bare-metal Netbird installed which provides access to the LAN
+        echo "Configuring route to homelab LAN via Docker host..."
+        
+        LAN_CIDR="$${HOMELAB_LAN_CIDR:-192.168.1.0/24}"
+        
+        # Get the default gateway (Docker host)
+        HOST_GW=$$(ip route | grep default | awk '{print $$3}')
+        
+        if [ -n "$$HOST_GW" ]; then
+          echo "Docker host gateway: $$HOST_GW"
+          echo "Adding route to $$LAN_CIDR via $$HOST_GW"
+          ip route add $$LAN_CIDR via $$HOST_GW 2>/dev/null || \
+            echo "Route already exists or failed to add"
+          echo "Current routing table:"
+          ip route
+        else
+          echo "WARNING: Could not determine Docker host gateway"
+        fi
+        
+        # Start Traefik
+        exec /entrypoint.sh traefik
     deploy:
       mode: replicated
       replicas: 1
@@ -52,8 +85,9 @@ services:
     environment:
       - CF_API_EMAIL=${CF_API_EMAIL}
       - CF_API_KEY=${CF_API_KEY}
+      - HOMELAB_LAN_CIDR=${HOMELAB_LAN_CIDR:-192.168.1.0/24}
     
-  whoami:
+  healthcheck:
     image: "traefik/whoami"
     networks:
       - traefik-internetwork
