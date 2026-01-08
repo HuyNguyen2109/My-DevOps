@@ -5,7 +5,7 @@ services:
     volumes:
       - rustdesk-data:/root
     networks:
-      - mesh-internetwork
+      - traefik-internetwork
     ports:
     - published: 21116
       target: 21116
@@ -41,7 +41,7 @@ services:
       placement:
         constraints:
           - node.platform.os == linux
-          - node.labels.type == constructor
+          - node.labels.codename == ${SWARM_NODE_CODENAME}
 
   hbbr:
     image: rustdesk/rustdesk-server:latest
@@ -49,7 +49,7 @@ services:
     volumes:
       - rustdesk-data:/root
     networks:
-      - mesh-internetwork
+      - traefik-internetwork
     ports:
     - published: 21117
       target: 21117
@@ -75,12 +75,12 @@ services:
       placement:
         constraints:
           - node.platform.os == linux
-          - node.labels.type == constructor
+          - node.labels.codename == ${SWARM_NODE_CODENAME}
 
 volumes:
   rustdesk-data:
     driver: local
 
 networks:
-  mesh-internetwork:
+  traefik-internetwork:
     external: true

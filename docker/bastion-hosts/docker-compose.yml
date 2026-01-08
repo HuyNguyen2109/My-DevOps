@@ -8,10 +8,8 @@ services:
       - ubuntu-data:/var
       - ubuntu-packages:/usr
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /var/lib/docker/volumes:/mnt/docker/volumes:rw
     deploy:
-      mode: replicated
-      replicas: 1
+      mode: global
       resources:
         limits:
           memory: "1G"
@@ -26,7 +24,7 @@ services:
         max_failure_ratio: 0.5
       placement:
         constraints:
-          - node.role == manager
+          - node.platform.os == linux
 
 networks:
   traefik-internetwork:

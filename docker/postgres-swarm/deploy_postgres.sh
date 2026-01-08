@@ -221,6 +221,8 @@ listen_addr = 0.0.0.0
 listen_port = 5432
 auth_type = md5
 auth_file = /etc/pgbouncer/userlist.txt
+auth_user = postgres
+auth_query = SELECT usename, passwd FROM pg_shadow WHERE usename=\$1
 admin_users = postgres
 stats_users = postgres
 pool_mode = transaction
