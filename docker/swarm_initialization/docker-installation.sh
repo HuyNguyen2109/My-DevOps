@@ -35,7 +35,6 @@ declare -a SWARM_NODES=(
 # CONFIGURATION
 # ============================================================================
 TARGET_USER="docker"                    # User to create/configure for Docker
-DOCKER_INSTALL_URL="https://get.docker.com"
 WIREGUARD_PORT="51821"                  # Wireguard listen port
 WIREGUARD_SUBNET="10.50.0.0/24"         # Wireguard network subnet
 WIREGUARD_INTERFACE="wg0"               # Wireguard interface name
@@ -656,12 +655,25 @@ install_docker_on_node() {
     case \"\$DISTRO_ID\" in
       ubuntu|debian)
         sudo apt-get update -y
-        sudo apt-get install -y --no-install-recommends curl ca-certificates gnupg lsb-release
+        sudo apt-get install -y --no-install-recommends ca-certificates curl gnupg lsb-release
+        
+        # Add Docker's official GPG key
+        sudo install -m 0755 -d /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/\${DISTRO_ID}/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        sudo chmod a+r /etc/apt/keyrings/docker.gpg
+        
+        # Set up the Docker repository
+        echo \"deb [arch=\$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/\${DISTRO_ID} \$(. /etc/os-release && echo \"\$VERSION_CODENAME\") stable\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+        
+        # Install Docker Engine
+        sudo apt-get update -y
+        sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+        ;;
+      *)
+        echo \"ERROR: Unsupported distribution (\$DISTRO_ID). This script only supports Ubuntu and Debian.\"
+        exit 1
         ;;
     esac
-    
-    # Download and run Docker convenience script
-    curl -fsSL ${DOCKER_INSTALL_URL} | sudo sh
     
     # Ensure docker group exists
     if ! getent group docker >/dev/null 2>&1; then
