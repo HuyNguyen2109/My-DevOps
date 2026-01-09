@@ -5,7 +5,7 @@
 # the setup of multiple nodes in a Docker Swarm cluster over Wireguard VPN.
 #
 # Features:
-# - Remote execution via SSH from satellite machine
+# - Remote execution via SSH from satellite machine with strict host key verification
 # - Wireguard VPN mesh network setup (kernel mode)
 # - UFW firewall configuration for manager/worker nodes
 # - Docker installation and Swarm initialization
@@ -38,9 +38,11 @@ TARGET_USER="docker"                    # User to create/configure for Docker
 WIREGUARD_PORT="51821"                  # Wireguard listen port
 WIREGUARD_SUBNET="10.50.0.0/24"         # Wireguard network subnet
 WIREGUARD_INTERFACE="wg0"               # Wireguard interface name
+SSH_KEYSCAN_TIMEOUT="30"                # Timeout for ssh-keyscan in seconds
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SSH_CREDENTIALS_DIR="${SCRIPT_DIR}/.ssh-credentials"
-SSH_OPTIONS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10"
+SSH_KNOWN_HOSTS_FILE="${SCRIPT_DIR}/.ssh-credentials/known_hosts"
+SSH_OPTIONS="-o StrictHostKeyChecking=yes -o ConnectTimeout=10 -o UserKnownHostsFile=${SSH_KNOWN_HOSTS_FILE}"
 
 # Temporary storage for generated keys
 declare -A NODE_PRIVATE_KEYS
@@ -94,6 +96,16 @@ SSH Credentials:
   File format (one of the following):
     - Private key file path
     - Or create a file containing: user:password (less secure)
+
+SSH Security:
+  This script uses strict SSH host key verification to prevent man-in-the-middle
+  attacks. On first run, the script will scan and store host keys for all nodes
+  in ${SSH_CREDENTIALS_DIR}/known_hosts. Subsequent runs will verify hosts
+  against these stored keys.
+  
+  ⚠️  SECURITY WARNING: The initial host key scan trusts the first key received.
+  For maximum security, perform the first run from a trusted network or manually
+  verify the host keys after collection.
 
 Examples:
   # Full setup
@@ -193,6 +205,77 @@ validate_nodes() {
   fi
   
   log "Validated ${#SWARM_NODES[@]} nodes ($manager_count managers)"
+}
+
+# ============================================================================
+# SSH KNOWN HOSTS MANAGEMENT
+# ============================================================================
+initialize_known_hosts() {
+  log "Initializing SSH known_hosts file..."
+  
+  # Ensure SSH credentials directory exists
+  if [ ! -d "$SSH_CREDENTIALS_DIR" ]; then
+    mkdir -p "$SSH_CREDENTIALS_DIR"
+    chmod 700 "$SSH_CREDENTIALS_DIR"
+  fi
+  
+  # Create known_hosts file if it doesn't exist
+  touch "$SSH_KNOWN_HOSTS_FILE"
+  chmod 600 "$SSH_KNOWN_HOSTS_FILE"
+  
+  log "Scanning and adding SSH host keys for all nodes..."
+  local added_count=0
+  local failed_count=0
+  
+  for node in "${SWARM_NODES[@]}"; do
+    IFS=':' read -r hostname role public_ip wg_ip <<< "$node"
+    
+    # Check if host key already exists in known_hosts (check both hostname and IP)
+    local ip_exists=false
+    local hostname_exists=false
+    
+    if ssh-keygen -F "$public_ip" -f "$SSH_KNOWN_HOSTS_FILE" >/dev/null 2>&1; then
+      ip_exists=true
+    fi
+    
+    if ssh-keygen -F "$hostname" -f "$SSH_KNOWN_HOSTS_FILE" >/dev/null 2>&1; then
+      hostname_exists=true
+    fi
+    
+    if $ip_exists && $hostname_exists; then
+      log "  ✓ $hostname ($public_ip) - Host key already in known_hosts"
+      continue
+    fi
+    
+    # Scan and add host key
+    log "  Scanning host key for $hostname ($public_ip)..."
+    local scan_error
+    scan_error=$(mktemp)
+    
+    # Scan by IP and hostname to capture both
+    if ssh-keyscan -H -T "$SSH_KEYSCAN_TIMEOUT" "$public_ip" "$hostname" >> "$SSH_KNOWN_HOSTS_FILE" 2>"$scan_error"; then
+      ((added_count++))
+      log "  ✓ $hostname ($public_ip) - Host key added to known_hosts"
+    else
+      ((failed_count++))
+      err "  ✗ $hostname ($public_ip) - Failed to scan host key"
+      # Log the error details if available
+      if [ -s "$scan_error" ]; then
+        err "     Error details: $(head -n 3 "$scan_error")"
+      fi
+    fi
+    
+    rm -f "$scan_error"
+  done
+  
+  if [ "$failed_count" -gt 0 ]; then
+    err "Failed to add $failed_count host key(s) to known_hosts."
+    err "Please ensure all nodes are reachable and SSH is running."
+    exit 1
+  fi
+  
+  log "Added $added_count new host key(s) to known_hosts"
+  log "SSH host key verification is now enabled for all connections"
 }
 
 # ============================================================================
@@ -876,6 +959,9 @@ main() {
     err "File format: .hostname (e.g., .swarm-manager-01)"
     exit 1
   fi
+  
+  # Initialize SSH known_hosts for secure host key verification
+  initialize_known_hosts
   
   # Check SSH connectivity
   check_ssh_connectivity
