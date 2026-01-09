@@ -42,7 +42,7 @@ WIREGUARD_INTERFACE="wg0"               # Wireguard interface name
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SSH_CREDENTIALS_DIR="${SCRIPT_DIR}/.ssh-credentials"
 SSH_KNOWN_HOSTS_FILE="${SCRIPT_DIR}/.ssh-credentials/known_hosts"
-SSH_OPTIONS="-o ConnectTimeout=10 -o UserKnownHostsFile=${SSH_KNOWN_HOSTS_FILE}"
+SSH_OPTIONS="-o StrictHostKeyChecking=yes -o ConnectTimeout=10 -o UserKnownHostsFile=${SSH_KNOWN_HOSTS_FILE}"
 
 # Temporary storage for generated keys
 declare -A NODE_PRIVATE_KEYS
@@ -208,6 +208,12 @@ validate_nodes() {
 # ============================================================================
 initialize_known_hosts() {
   log "Initializing SSH known_hosts file..."
+  
+  # Ensure SSH credentials directory exists
+  if [ ! -d "$SSH_CREDENTIALS_DIR" ]; then
+    mkdir -p "$SSH_CREDENTIALS_DIR"
+    chmod 700 "$SSH_CREDENTIALS_DIR"
+  fi
   
   # Create known_hosts file if it doesn't exist
   touch "$SSH_KNOWN_HOSTS_FILE"
