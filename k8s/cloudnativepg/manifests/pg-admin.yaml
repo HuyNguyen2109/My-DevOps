@@ -1,0 +1,166 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: pg-admin-cert
+  namespace: databases
+spec:
+  secretName: pg-admin-cert-tls
+  issuerRef:
+    name: cloudflare-clusterissuer
+    kind: ClusterIssuer
+  commonName: "pg-admin.mcb-svc.work"
+  dnsNames:
+  - "pg-admin.mcb-svc.work"
+  duration: 2160h # 90 days
+  renewBefore: 360h # 15 days before expiry
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: pg-admin-secret-eso
+  namespace: databases
+spec:
+  refreshInterval: 24h
+  secretStoreRef:
+    name: vault-backend
+    kind: ClusterSecretStore
+  target:
+    name: pg-admin-secret-eso
+    creationPolicy: Owner
+  data:
+    - secretKey: pg-admin-password
+      remoteRef:
+        key: pg-admin
+        property: PGADMIN_DEFAULT_PASSWORD
+    - secretKey: pg-admin-email
+      remoteRef:
+        key: pg-admin
+        property: PGADMIN_DEFAULT_EMAIL
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pg-admin
+  namespace: databases
+  labels:
+    app: pg-admin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pg-admin
+  template:
+    metadata:
+      labels:
+        app: pg-admin
+    spec:
+      nodeSelector:
+        node.kubernetes.io/worker: "true"
+        topology.kubernetes.io/region: "sg-prod-01"
+      securityContext:
+        runAsUser: 5050
+        runAsGroup: 5050
+        fsGroup: 5050
+      initContainers:
+        - name: fix-volume-permission
+          image: busybox
+          command: ["sh", "-c", "chown -R 5050:5050 /var/lib/pgadmin"]
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+          - name: pgadmin-data
+            mountPath: /var/lib/pgadmin
+      containers:
+        - name: pg-admin
+          image: dpage/pgadmin4:9.9.0
+          ports:
+            - containerPort: 80
+          volumeMounts:
+          - name: pgadmin-data
+            mountPath: /var/lib/pgadmin
+          env:
+            - name: PGADMIN_DEFAULT_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: pg-admin-secret-eso
+                  key: pg-admin-email
+            - name: PGADMIN_DEFAULT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pg-admin-secret-eso
+                  key: pg-admin-password
+            - name: PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION
+              value: "False"
+            - name: PGADMIN_CONFIG_PROXY_X_HOST
+              value: "True"
+            - name: PGADMIN_CONFIG_PROXY_X_PORT
+              value: "True"
+            - name: PGADMIN_CONFIG_PROXY_X_PROTO
+              value: "True"
+            - name: PGADMIN_LISTEN_PORT
+              value: "80"
+            - name: PGADMIN_CONFIG_ALLOW_REMOTE_USER
+              value: "True"
+      volumes:
+        - name: pgadmin-data
+          persistentVolumeClaim:
+            claimName: pg-admin-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pg-admin-svc
+  namespace: databases
+spec:
+  selector:
+    app: pg-admin
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: pgadmin-ingress
+  namespace: databases
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`pg-admin.mcb-svc.work`)
+      kind: Rule
+      services:
+        - name: pg-admin-svc
+          port: 80
+          scheme: http
+  tls:
+    secretName: pg-admin-cert-tls
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pg-admin-pv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  persistentVolumeReclaimPolicy: Retain
+  csi:
+    driver: driver.longhorn.io
+    volumeHandle: pg-admin-vol
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pg-admin-pvc
+  namespace: databases
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: longhorn
+  volumeName: pg-admin-pv

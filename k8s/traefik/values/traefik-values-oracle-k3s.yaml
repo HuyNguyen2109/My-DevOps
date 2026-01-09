@@ -1,0 +1,66 @@
+additionalArguments:
+  - "--providers.kubernetescrd"
+  - "--providers.kubernetesingress"
+
+hostNetwork: true
+service:
+  enabled: true
+  type: NodePort
+
+deployment:
+  enabled: true
+  replicas: 1
+
+ports:
+  traefik:
+    expose: 
+      default: true
+    port: 8083
+    protocol: TCP
+  web:
+    port: 9080
+  websecure:
+    port: 9443
+  portainer-agent:
+    expose: 
+      default: true
+    port: 9001
+    protocol: TCP
+
+nodeSelector:
+  node-role.kubernetes.io/control-plane: "true"
+
+tolerations:
+- key: "CriticalAddonsOnly"
+  operator: "Equal"
+  value: "true"
+  effect: "NoExecute"
+  
+ingressClass:
+  enabled: true
+  isDefaultClass: true
+  name: traefik
+
+ingressRoute:
+  dashboard:
+    enabled: true
+    matchRule: PathPrefix(`/dashboard`) || PathPrefix(`/api`)
+    entryPoints:
+      - websecure
+    middlewares:
+      - name: authentik-outpost-proxy
+        namespace: default
+    tls:
+      secretName: cloudflare-cert-traefik
+  healthcheck:
+    enabled: true
+    matchRule: PathPrefix(`/ping`)
+    entryPoints:
+      - websecure
+    tls:
+      secretName: cloudflare-cert-traefik
+
+providers:
+  kubernetesCRD:
+    enabled: true
+    allowCrossNamespace: true

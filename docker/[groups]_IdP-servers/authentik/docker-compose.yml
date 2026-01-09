@@ -1,0 +1,143 @@
+
+services:
+  server:
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2025.2.2}
+    command: server
+    environment:
+      AUTHENTIK_REDIS__HOST: valkey-server
+      AUTHENTIK_REDIS__PASSWORD: ${VALKEY_AUTH_PASSWORD}
+      AUTHENTIK_POSTGRESQL__HOST: ${PG_HOST}
+      AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
+      AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+      AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__HOST: ${REPLICA_0_HOST:-postgresql-master}
+      AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__NAME: ${PG_DB:-authentik}
+      AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__USER: ${PG_USER:-authentik}
+      AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PASSWORD: ${PG_PASS}
+      AUTHENTIK_LOG_LEVEL: error
+      AUTHENTIK_STORAGE__MEDIA__BACKEND: s3
+      AUTHENTIK_STORAGE__MEDIA__S3__REGION: auto
+      AUTHENTIK_STORAGE__MEDIA__S3__USE_SSL: "true"
+      AUTHENTIK_STORAGE__MEDIA__S3__ENDPOINT: ${S3_ENDPOINT}
+      AUTHENTIK_STORAGE__MEDIA__S3__ACCESS_KEY: ${S3_ACCESS_KEY_ID}
+      AUTHENTIK_STORAGE__MEDIA__S3__SECRET_KEY: ${S3_SECRET_ACCESS_KEY}
+      AUTHENTIK_STORAGE__MEDIA__S3__BUCKET_NAME: ${S3_BUCKET}
+    volumes:
+      - authentik-server-media:/media
+      - authentik-server-templates:/templates
+    deploy:
+      update_config:
+        parallelism: 1
+        delay: 5s
+        failure_action: rollback
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.platform.os == linux
+          - node.labels.type == constructor
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.authentik.rule=Host(`${UI_URL}`)"
+        - "traefik.http.routers.authentik.entrypoints=websecure"
+        - "traefik.http.services.authentik-server.loadbalancer.server.port=9000"
+        - "traefik.http.routers.authentik.service=authentik-server"
+        - "traefik.http.routers.authentik.tls.certresolver=letsencrypt"
+        - "traefik.http.services.authentik-server.loadbalancer.sticky.cookie=true"
+        - "traefik.http.services.authentik-server.loadbalancer.sticky.cookie.name=authentik_ha"
+    networks:
+      - traefik-internetwork
+      - db-internetwork
+  worker:
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2025.2.2}
+    command: worker
+    environment:
+      AUTHENTIK_REDIS__HOST: valkey-server
+      AUTHENTIK_REDIS__PASSWORD: ${VALKEY_AUTH_PASSWORD}
+      AUTHENTIK_POSTGRESQL__HOST: ${PG_HOST}
+      AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
+      AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+      AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__HOST: ${REPLICA_0_HOST:-postgresql-master}
+      AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__NAME: ${PG_DB:-authentik}
+      AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__USER: ${PG_USER:-authentik}
+      AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PASSWORD: ${PG_PASS}
+      AUTHENTIK_LOG_LEVEL: error
+    user: root
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - authentik-worker-media:/media
+      - authentik-worker-certs:/certs
+      - authentik-worker-templates:/templates
+    networks:
+      - db-internetwork
+      - traefik-internetwork
+    deploy:
+      endpoint_mode: vip
+      update_config:
+        parallelism: 1
+        delay: 5s
+        failure_action: rollback
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.platform.os == linux
+          - node.labels.type == constructor
+
+  authentik-outpost-proxy:
+    image: ghcr.io/goauthentik/proxy:${AUTHENTIK_TAG:-2025.4.1}
+      # Optionally specify which networks the container should be
+      # might be needed to reach the core authentik server
+    networks:
+      - traefik-internetwork
+      - db-internetwork
+    environment:
+      AUTHENTIK_REDIS__HOST: valkey-server
+      AUTHENTIK_REDIS__PASSWORD: ${VALKEY_AUTH_PASSWORD}
+      AUTHENTIK_HOST: https://auth.mcb-svc.work
+      AUTHENTIK_INSECURE: "false"
+      AUTHENTIK_TOKEN: ${AUTHENTIK_OUTPOST_TOKEN}
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: "256M"
+        reservations:
+          cpus: "0.125"  
+          memory: "128M"
+      update_config:
+        parallelism: 1
+        delay: 5s
+        failure_action: rollback
+        max_failure_ratio: 0.5
+      restart_policy:
+        condition: any
+      placement:
+        constraints:
+          - node.labels.type == constructor
+
+networks:
+  db-internetwork:
+    external: true
+  traefik-internetwork:
+    external: true
+
+volumes:
+  authentik-server-media:
+    driver: local
+  authentik-server-templates:
+    driver: local
+  authentik-worker-media:
+    driver: local
+  authentik-worker-certs:
+    driver: local
+  authentik-worker-templates:
+    driver: local

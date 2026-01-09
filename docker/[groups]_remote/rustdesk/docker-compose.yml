@@ -1,0 +1,86 @@
+services:
+  hbbs:
+    image: rustdesk/rustdesk-server:latest
+    command: hbbs
+    volumes:
+      - rustdesk-data:/root
+    networks:
+      - traefik-internetwork
+    ports:
+    - published: 21116
+      target: 21116
+      protocol: udp
+      mode: host
+    - published: 21116
+      target: 21116
+      protocol: tcp
+      mode: host
+    - published: 21115
+      target: 21115
+      protocol: tcp
+      mode: host
+    depends_on:
+      - hbbr
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: "256M"
+        reservations:
+          cpus: "0.125"  
+          memory: "128M"
+      update_config:
+        parallelism: 1
+        delay: 5s
+        failure_action: rollback
+        max_failure_ratio: 0.5
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.platform.os == linux
+          - node.labels.codename == ${SWARM_NODE_CODENAME}
+
+  hbbr:
+    image: rustdesk/rustdesk-server:latest
+    command: hbbr
+    volumes:
+      - rustdesk-data:/root
+    networks:
+      - traefik-internetwork
+    ports:
+    - published: 21117
+      target: 21117
+      protocol: tcp
+      mode: host
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: "256M"
+        reservations:
+          cpus: "0.125"  
+          memory: "128M"
+      update_config:
+        parallelism: 1
+        delay: 5s
+        failure_action: rollback
+        max_failure_ratio: 0.5
+      # restart_policy:
+        # condition: on-failure
+      placement:
+        constraints:
+          - node.platform.os == linux
+          - node.labels.codename == ${SWARM_NODE_CODENAME}
+
+volumes:
+  rustdesk-data:
+    driver: local
+
+networks:
+  traefik-internetwork:
+    external: true

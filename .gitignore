@@ -3,12 +3,12 @@
 # Local Terraform state
 *.tfstate
 *.tfstate.*
+*.img
 
 # Crash logs
 crash.log
 
 # Ignore override files (personal or environment-specific)
-*.tfvars
 *.tfvars.json
 override.tf
 override.tf.json
@@ -17,6 +17,7 @@ override.tf.json
 
 # Terraform plan output
 *.tfplan
+/terraform/*/assets
 
 # Sensitive files
 secrets.auto.tfvars
@@ -38,3 +39,7 @@ id_rsa.pub
 
 # Optional: OS-specific files
 Thumbs.db
+
+# Some specific files
+.default-*.txt
+*/.ssh-credentials/*

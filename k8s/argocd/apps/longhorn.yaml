@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: longhorn
+  namespace: argocd-system
+spec:
+  destination:
+    namespace: longhorn-system
+    name: on-cloud
+  source:
+    path: ''
+    repoURL: https://charts.longhorn.io
+    targetRevision: 1.9.1
+    chart: longhorn
+    helm:
+      valueFiles:
+        - $values/k8s/longhorn/values/longhorn-values-oracle-k3s.yaml
+  sources:
+    - repoURL: https://charts.longhorn.io
+      chart: longhorn
+      targetRevision: 1.9.1
+      helm:
+        valueFiles:
+          - $values/k8s/longhorn/values/longhorn-values-oracle-k3s.yaml
+    - repoURL: git@github.com:HuyNguyen2109/My-DevOps.git
+      targetRevision: develop
+      ref: values
+  project: homelab
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

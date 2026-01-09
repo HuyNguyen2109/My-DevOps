@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  namespace: production-external-apps
+  labels:
+    app: healthcheck
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: healthcheck
+  template:
+    metadata:
+      labels:
+        app: healthcheck
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        volumeMounts:
+        - name: nginx-cache
+          mountPath: /var/cache/nginx
+        ports:
+        - containerPort: 80
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
+          allowPrivilegeEscalation: true
+      volumes:
+      - name: nginx-cache
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: healthcheck-service
+  namespace: production-external-apps
+spec:
+  selector:
+    app: healthcheck
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: cloudflare-wildcard-cert-nginx
+  namespace: production-external-apps
+spec:
+  secretName: cloudflare-wildcard-cert-tls-nginx  # This is the TLS secret used in Ingress
+  issuerRef:
+    name: cloudflare-clusterissuer
+    kind: ClusterIssuer
+  commonName: "*.mcb-svc.work"
+  dnsNames:
+  - "*.mcb-svc.work"
+  duration: 2160h # 90 days
+  renewBefore: 360h # 15 days before expiry
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: nginx-ingressroute
+  namespace: production-external-apps
+spec:
+  entryPoints:
+  - websecure
+  routes:
+  - match: Host(`k3s-healthcheck.mcb-svc.work`)
+    kind: Rule
+    services:
+    - name: healthcheck-service
+      port: 80
+  tls:
+    secretName: cloudflare-wildcard-cert-tls-nginx
+

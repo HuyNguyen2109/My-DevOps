@@ -1,0 +1,74 @@
+expose:
+  type: ingress
+  ingress:
+    hosts:
+      core: registry.mcb-svc.work
+      className: traefik
+      annotations:
+        cert-manager.io/cluster-issuer: "cloudflare-clusterissuer"
+    traefik.ingress.kubernetes.io/router.entrypoints: "websecure"
+    traefik.ingress.kubernetes.io/router.tls: "true"
+  tls:
+    enabled: true
+    certSource: auto
+    auto:
+      commonName: cert-manager
+
+externalURL: https://registry.mcb-svc.work
+persistence:
+  enabled: true
+  imageChartStorage:
+    type: filesystem
+existingSecretSecretKey: harbor-secret-key-eso
+
+existingSecretAdminPassword: harbor-admin-password-eso
+cache:
+  enabled: true
+
+portal:
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+  nodeSelector:
+    node.kubernetes.io/worker: "true"
+    topology.kubernetes.io/region: "sg-prod-01"
+
+core:
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+  nodeSelector:
+    node.kubernetes.io/worker: "true"
+    topology.kubernetes.io/region: "sg-prod-01"
+
+jobservice:
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+  nodeSelector:
+    node.kubernetes.io/worker: "true"
+    topology.kubernetes.io/region: "sg-prod-01"
+
+registry:
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+  nodeSelector:
+    node.kubernetes.io/worker: "true"
+    topology.kubernetes.io/region: "sg-prod-01"
+
+trivy:
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: 1
+      memory: 1Gi
+  nodeSelector:
+    node.kubernetes.io/worker: "true"
+    topology.kubernetes.io/region: "sg-prod-01"

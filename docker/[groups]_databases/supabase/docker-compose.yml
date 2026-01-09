@@ -1,0 +1,504 @@
+version: "3.8"
+
+services:
+  # ============================================================
+  # PostgreSQL Database - Core database for Supabase
+  # ============================================================
+  db:
+    image: supabase/postgres:17.6.1.066
+    volumes:
+      - supabase-db-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=${SUPABASE_POSTGRES_PASSWORD}
+      - POSTGRES_DB=postgres
+      - POSTGRES_HOST=/var/run/postgresql
+      - POSTGRES_PORT=5432
+      - POSTGRES_HOST_AUTH_METHOD=md5
+      - POSTGRES_INITDB_ARGS=--auth-host=md5 --auth-local=md5
+      - JWT_SECRET=${SUPABASE_JWT_SECRET}
+      - JWT_EXP=3600
+    command: >
+      bash -c "
+      sed -i 's/scram-sha-256/md5/g' /etc/postgresql/postgresql.conf || true;
+      sed -i 's/scram-sha-256/md5/g' /var/lib/postgresql/data/pg_hba.conf || true;
+      docker-entrypoint.sh postgres
+      "
+    networks:
+      - db-internetwork
+      - traefik-internetwork
+    ports:
+      - 5432:5432
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.database == master
+      restart_policy:
+        condition: any
+      resources:
+        limits:
+          cpus: "4"
+          memory: "8G"
+        reservations:
+          cpus: "0.5"
+          memory: "2G"
+
+  # ============================================================
+  # Kong API Gateway - API gateway for routing requests
+  # ============================================================
+  kong:
+    image: kong:3.9.1
+    depends_on:
+      - db
+    environment:
+      - KONG_DATABASE=postgres
+      - KONG_PG_HOST=db
+      - KONG_PG_PORT=5432
+      - KONG_PG_USER=postgres
+      - KONG_PG_PASSWORD=${SUPABASE_POSTGRES_PASSWORD_ENCODED}
+      - KONG_PG_DATABASE=postgres
+      - KONG_DECLARATIVE_CONFIG=/var/lib/kong/kong.yml
+      - KONG_DNS_ORDER=LAST,A,CNAME
+      - KONG_PLUGINS=request-transformer,cors,key-auth,acl,basic-auth
+      - KONG_NGINX_PROXY_PROXY_BUFFER_SIZE=160k
+      - KONG_NGINX_PROXY_PROXY_BUFFERS=64 160k
+    ports:
+      - target: 8000
+        published: 8000
+        mode: ingress
+    configs:
+      - source: kong-config
+        target: /var/lib/kong/kong.yml
+    networks:
+      - db-internetwork
+      - traefik-internetwork
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.database == master
+      restart_policy:
+        condition: any
+      resources:
+        limits:
+          cpus: "2"
+          memory: "2G"
+        reservations:
+          cpus: "0.25"
+          memory: "512M"
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.supabase-kong.rule=Host(`api.supabase.mcb-svc.work`)"
+        - "traefik.http.routers.supabase-kong.entrypoints=websecure"
+        - "traefik.http.routers.supabase-kong.tls=true"
+        - "traefik.http.services.supabase-kong.loadbalancer.server.port=8000"
+
+  # ============================================================
+  # PostgREST - REST API for PostgreSQL
+  # ============================================================
+  rest:
+    image: postgrest/postgrest:v14.2
+    depends_on:
+      - db
+    environment:
+      - PGRST_DB_URI=postgres://postgres:${SUPABASE_POSTGRES_PASSWORD_ENCODED}@db:5432/postgres
+      - PGRST_DB_SCHEMAS=public,storage,graphql_public
+      - PGRST_DB_ANON_ROLE=anon
+      - PGRST_JWT_SECRET=${SUPABASE_JWT_SECRET}
+      - PGRST_DB_USE_LEGACY_GUCS=false
+      - PGRST_APP_SETTINGS_JWT_SECRET=${SUPABASE_JWT_SECRET}
+      - PGRST_APP_SETTINGS_JWT_EXP=3600
+    networks:
+      - db-internetwork
+    deploy:
+      mode: replicated
+      replicas: 2
+      placement:
+        constraints:
+          - node.labels.database == master
+      restart_policy:
+        condition: any
+      resources:
+        limits:
+          cpus: "1"
+          memory: "1G"
+        reservations:
+          cpus: "0.125"
+          memory: "256M"
+
+  # ============================================================
+  # GoTrue - Authentication service
+  # ============================================================
+  auth:
+    image: supabase/gotrue:v2.184.0
+    depends_on:
+      - db
+    environment:
+      - GOTRUE_API_HOST=0.0.0.0
+      - GOTRUE_API_PORT=9999
+      - API_EXTERNAL_URL=${API_EXTERNAL_URL}
+      - GOTRUE_DB_DRIVER=postgres
+      - GOTRUE_DB_DATABASE_URL=postgres://postgres:${SUPABASE_POSTGRES_PASSWORD_ENCODED}@db:5432/postgres
+      - GOTRUE_SITE_URL=${SITE_URL}
+      - GOTRUE_URI_ALLOW_LIST=${ADDITIONAL_REDIRECT_URLS}
+      - GOTRUE_DISABLE_SIGNUP=${DISABLE_SIGNUP}
+      - GOTRUE_JWT_ADMIN_ROLES=service_role
+      - GOTRUE_JWT_AUD=authenticated
+      - GOTRUE_JWT_DEFAULT_GROUP_NAME=authenticated
+      - GOTRUE_JWT_EXP=3600
+      - GOTRUE_JWT_SECRET=${SUPABASE_JWT_SECRET}
+      - GOTRUE_EXTERNAL_EMAIL_ENABLED=${ENABLE_EMAIL_SIGNUP}
+      - GOTRUE_MAILER_AUTOCONFIRM=${ENABLE_EMAIL_AUTOCONFIRM}
+      # - GOTRUE_SMTP_ADMIN_EMAIL=${SMTP_ADMIN_EMAIL}
+      # - GOTRUE_SMTP_HOST=${SMTP_HOST}
+      # - GOTRUE_SMTP_PORT=${SMTP_PORT}
+      # - GOTRUE_SMTP_USER=${SMTP_USER}
+      # - GOTRUE_SMTP_PASS=${SUPABASE_SMTP_PASSWORD}
+      # - GOTRUE_SMTP_SENDER_NAME=${SMTP_SENDER_NAME}
+      - GOTRUE_MAILER_URLPATHS_INVITE=/auth/v1/verify
+      - GOTRUE_MAILER_URLPATHS_CONFIRMATION=/auth/v1/verify
+      - GOTRUE_MAILER_URLPATHS_RECOVERY=/auth/v1/verify
+      - GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE=/auth/v1/verify
+      - GOTRUE_EXTERNAL_PHONE_ENABLED=${ENABLE_PHONE_SIGNUP}
+      - GOTRUE_SMS_AUTOCONFIRM=${ENABLE_PHONE_AUTOCONFIRM}
+    networks:
+      - db-internetwork
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.database == master
+      restart_policy:
+        condition: any
+      resources:
+        limits:
+          cpus: "1"
+          memory: "1G"
+        reservations:
+          cpus: "0.125"
+          memory: "256M"
+
+  # ============================================================
+  # Realtime - Real-time data synchronization
+  # ============================================================
+  realtime:
+    image: supabase/realtime:v2.69.1
+    depends_on:
+      - db
+    environment:
+      - PORT=4000
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=${SUPABASE_POSTGRES_PASSWORD_ENCODED}
+      - DB_NAME=postgres
+      - DB_AFTER_CONNECT_QUERY=SET search_path TO _realtime
+      - DB_ENC_KEY=supabaserealtime
+      - API_JWT_SECRET=${SUPABASE_JWT_SECRET}
+      - FLY_ALLOC_ID=fly123
+      - FLY_APP_NAME=realtime
+      - SECRET_KEY_BASE=UpNVntn3cDxHJpq99YMc1T1AQgQpc8kfYTuRgBiYa15BLrx8etQoXz3gZv1/u2oq
+      - ERL_AFLAGS=-proto_dist inet_tcp
+      - ENABLE_TAILSCALE=false
+      - DNS_NODES=''
+    networks:
+      - db-internetwork
+    command: >
+      sh -c "/app/bin/migrate && /app/bin/realtime eval 'Realtime.Release.seeds(Realtime.Repo)' && /app/bin/server"
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.database == master
+      restart_policy:
+        condition: any
+      resources:
+        limits:
+          cpus: "1"
+          memory: "1G"
+        reservations:
+          cpus: "0.125"
+          memory: "256M"
+
+  # ============================================================
+  # Storage - Object storage service
+  # ============================================================
+  storage:
+    image: supabase/storage-api:v1.33.4
+    depends_on:
+      - db
+      - rest
+    volumes:
+      - supabase-storage-data:/var/lib/storage
+    environment:
+      - ANON_KEY=${SUPABASE_ANON_KEY}
+      - SERVICE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - POSTGREST_URL=http://rest:3000
+      - PGRST_JWT_SECRET=${SUPABASE_JWT_SECRET}
+      - DATABASE_URL=postgres://postgres:${SUPABASE_POSTGRES_PASSWORD_ENCODED}@db:5432/postgres
+      - FILE_SIZE_LIMIT=52428800
+      - STORAGE_BACKEND=file
+      - FILE_STORAGE_BACKEND_PATH=/var/lib/storage
+      - TENANT_ID=stub
+      - REGION=stub
+      - GLOBAL_S3_BUCKET=stub
+      - ENABLE_IMAGE_TRANSFORMATION=true
+      - IMGPROXY_URL=http://imgproxy:5001
+    networks:
+      - db-internetwork
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.database == master
+      restart_policy:
+        condition: any
+      resources:
+        limits:
+          cpus: "1"
+          memory: "1G"
+        reservations:
+          cpus: "0.125"
+          memory: "256M"
+
+  # ============================================================
+  # Image Proxy - Image transformation service
+  # ============================================================
+  imgproxy:
+    image: darthsim/imgproxy:v3.30.1
+    environment:
+      - IMGPROXY_BIND=:5001
+      - IMGPROXY_LOCAL_FILESYSTEM_ROOT=/
+      - IMGPROXY_USE_ETAG=true
+      - IMGPROXY_ENABLE_WEBP_DETECTION=true
+    volumes:
+      - supabase-storage-data:/var/lib/storage
+    networks:
+      - db-internetwork
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.database == master
+      restart_policy:
+        condition: any
+      resources:
+        limits:
+          cpus: "1"
+          memory: "512M"
+        reservations:
+          cpus: "0.125"
+          memory: "128M"
+
+  # ============================================================
+  # Meta - Metadata service
+  # ============================================================
+  meta:
+    image: supabase/postgres-meta:v0.95.1
+    depends_on:
+      - db
+    environment:
+      - PG_META_PORT=8080
+      - PG_META_DB_HOST=db
+      - PG_META_DB_PORT=5432
+      - PG_META_DB_NAME=postgres
+      - PG_META_DB_USER=postgres
+      - PG_META_DB_PASSWORD=${SUPABASE_POSTGRES_PASSWORD_ENCODED}
+    networks:
+      - db-internetwork
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.database == master
+      restart_policy:
+        condition: any
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "512M"
+        reservations:
+          cpus: "0.125"
+          memory: "128M"
+
+  # ============================================================
+  # Studio - Supabase Dashboard/UI
+  # ============================================================
+  studio:
+    image: supabase/studio:latest
+    depends_on:
+      - kong
+    environment:
+      - STUDIO_PG_META_URL=http://meta:8080
+      - POSTGRES_PASSWORD=${SUPABASE_POSTGRES_PASSWORD_ENCODED}
+      - DEFAULT_ORGANIZATION_NAME=${STUDIO_DEFAULT_ORGANIZATION}
+      - DEFAULT_PROJECT_NAME=${STUDIO_DEFAULT_PROJECT}
+      - SUPABASE_URL=http://kong:8000
+      - SUPABASE_PUBLIC_URL=${API_EXTERNAL_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+    ports:
+      - target: 3000
+        published: 3000
+        mode: ingress
+    networks:
+      - db-internetwork
+      - traefik-internetwork
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.database == master
+      restart_policy:
+        condition: any
+      resources:
+        limits:
+          cpus: "1"
+          memory: "1G"
+        reservations:
+          cpus: "0.125"
+          memory: "256M"
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.supabase-studio.rule=Host(`supabase.mcb-svc.work`)"
+        - "traefik.http.routers.supabase-studio.entrypoints=websecure"
+        - "traefik.http.routers.supabase-studio.tls=true"
+        - "traefik.http.services.supabase-studio.loadbalancer.server.port=3000"
+
+  # ============================================================
+  # Functions - Edge Functions (Deno runtime)
+  # ============================================================
+  functions:
+    image: supabase/edge-runtime:v1.69.28
+    depends_on:
+      - kong
+    environment:
+      - JWT_SECRET=${SUPABASE_JWT_SECRET}
+      - SUPABASE_URL=http://kong:8000
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - SUPABASE_DB_URL=postgresql://postgres:@db:5432/postgres
+      - VERIFY_JWT=false
+    volumes:
+      - supabase-functions:/home/deno/functions
+    networks:
+      - db-internetwork
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.database == master
+      restart_policy:
+        condition: any
+      resources:
+        limits:
+          cpus: "1"
+          memory: "1G"
+        reservations:
+          cpus: "0.125"
+          memory: "256M"
+
+  # ============================================================
+  # Analytics - LogFlare analytics (optional)
+  # ============================================================
+  analytics:
+    image: supabase/logflare:1.27.3
+    depends_on:
+      - db
+    environment:
+      - LOGFLARE_NODE_HOST=127.0.0.1
+      - DB_USERNAME=postgres
+      - DB_DATABASE=postgres
+      - DB_HOSTNAME=db
+      - DB_PORT=5432
+      - DB_PASSWORD=${SUPABASE_POSTGRES_PASSWORD_ENCODED}
+      - DB_SCHEMA=_analytics
+      - LOGFLARE_API_KEY=${LOGFLARE_API_KEY}
+      - LOGFLARE_SINGLE_TENANT=true
+      - LOGFLARE_SUPABASE_MODE=true
+      - LOGFLARE_MIN_CLUSTER_SIZE=1
+      - RELEASE_COOKIE=cookie
+    ports:
+      - target: 4000
+        published: 4000
+        mode: ingress
+    networks:
+      - db-internetwork
+      - traefik-internetwork
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.database == master
+      restart_policy:
+        condition: any
+      resources:
+        limits:
+          cpus: "1"
+          memory: "1G"
+        reservations:
+          cpus: "0.125"
+          memory: "256M"
+
+  # ============================================================
+  # Vector - Embeddings for AI (optional)
+  # ============================================================
+  vector:
+    image: timberio/vector:0.52.0-alpine
+    depends_on:
+      - analytics
+    volumes:
+      - supabase-logs:/var/log
+    configs:
+      - source: vector-config
+        target: /etc/vector/vector.yml
+    networks:
+      - db-internetwork
+    command: ["--config", "/etc/vector/vector.yml"]
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.database == master
+      restart_policy:
+        condition: any
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "512M"
+        reservations:
+          cpus: "0.125"
+          memory: "128M"
+
+networks:
+  db-internetwork:
+    external: true
+  traefik-internetwork:
+    external: true
+
+configs:
+  kong-config:
+    external: true
+  vector-config:
+    external: true
+
+volumes:
+  supabase-db-data:
+    driver: local
+  supabase-storage-data:
+    driver: local
+  supabase-functions:
+    driver: local
+  supabase-logs:
+    driver: local

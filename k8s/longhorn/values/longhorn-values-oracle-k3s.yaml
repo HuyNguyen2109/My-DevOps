@@ -1,0 +1,57 @@
+global:
+  nodeSelector:
+    node.kubernetes.io/worker: "true"
+
+networkPolicies:
+  enabled: false
+  type: "k3s"
+
+service:
+  ui:
+    type: Rancher-Proxy
+  manager:
+    type: ClusterIP
+longhornUI:
+  replicas: 1
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 1
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                    - longhorn-ui
+            topologyKey: kubernetes.io/hostname
+  nodeSelector:
+    node-role.kubernetes.io/control-plane: "true"
+  tolerations:
+  - key: "CriticalAddonsOnly"
+    operator: "Equal"
+    value: "true"
+    effect: "NoExecute"
+
+defaultSettings:
+  defaultDataPath: "/var/lib/longhorn"
+  deletingConfirmationFlag: "true"
+  replicaAutoBalance: "true"
+enablePSP: false
+
+persistence:
+  defaultClassReplicaCount: 4
+  reclaimPolicy: "Retain"
+  migratable: true
+
+defaultBackupStore:
+  backupTarget: "s3://longhorn@auto/"
+  backupTargetCredentialSecret: "minio-secret-eso"
+
+longhornManager:
+  log:
+    format: json
+
+longhornDriver:
+  log:
+    format: json

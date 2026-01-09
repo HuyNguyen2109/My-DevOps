@@ -1,0 +1,44 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: traefik-multi-cluster
+  namespace: argocd-system
+spec:
+  generators:
+    - list:
+        elements:
+          - cluster: on-cloud
+            name: production-1
+            valuesFile: k8s/traefik/values/traefik-values-oracle-k3s.yaml
+          - cluster: homelab
+            name: production-2
+            valuesFile: k8s/traefik/values/traefik-values.yaml
+  template:
+    metadata:
+      name: traefik-{{name}}
+    spec:
+      project: homelab
+      source:
+        repoURL: https://traefik.github.io/charts
+        chart: traefik
+        targetRevision: 36.3.0
+        helm:
+          valueFiles:
+            - $values/{{valuesFile}}
+      sources:
+        - repoURL: https://traefik.github.io/charts
+          chart: traefik
+          targetRevision: 36.3.0
+          helm:
+            valueFiles:
+              - $values/{{valuesFile}}
+        - repoURL: git@github.com:HuyNguyen2109/My-DevOps.git
+          targetRevision: develop
+          ref: values
+      destination:
+        name: '{{cluster}}'
+        namespace: traefik
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true

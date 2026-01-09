@@ -1,0 +1,144 @@
+global:
+  image:
+    repository: docker.io/authentik/server
+    tag: "2025.10"
+  nodeSelector:
+    node.kubernetes.io/worker: "true"
+    topology.kubernetes.io/region: "sg-prod-01"
+  volumes:
+    - name: postgres-cacert-eso
+      secret:
+        secretName: postgres-cacert-eso
+    - name: postgres-cert-eso
+      secret:
+        secretName: postgres-cert-eso
+    - name: postgres-key-eso
+      secret:
+        secretName: postgres-key-eso
+        defaultMode: 0640 
+  volumeMounts:
+    - name: postgres-cacert-eso
+      mountPath: /etc/postgres/cacert
+      readOnly: true
+    - name: postgres-cert-eso
+      mountPath: /etc/postgres/cert
+      readOnly: true
+    - name: postgres-key-eso
+      mountPath: /etc/postgres/key
+      readOnly: true
+  env:
+    - name: AUTHENTIK_SECRET_KEY
+      valueFrom:
+        secretKeyRef:
+          name: authentik-secret-key-eso
+          key: authentik-secret-key
+    - name: AUTHENTIK_POSTGRESQL__HOST
+      value: "pooler-authentik-db-rw.databases.svc.cluster.local"
+    - name: AUTHENTIK_POSTGRESQL__USER
+      value: "authentik_dbadmin"
+    - name: AUTHENTIK_POSTGRESQL__NAME
+      value: "authentik-prd"  
+    - name: AUTHENTIK_POSTGRESQL__PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: postgres-db-password-eso
+          key: authentik-db-password
+    - name: AUTHENTIK_POSTGRESQL__SSLMODE
+      value: "verify-full"
+    - name: AUTHENTIK_POSTGRESQL__SSLROOTCERT
+      value: /etc/postgres/cacert/cloudflare-origin-ca-pem-b64
+    - name: AUTHENTIK_POSTGRESQL__SSLCERT
+      value: /etc/postgres/cert/cloudflare-cert-pem-b64
+    - name: AUTHENTIK_POSTGRESQL__SSLKEY
+      value: /etc/postgres/key/cloudflare-key-pem-b64
+    - name: AUTHENTIK_STORAGE__MEDIA__BACKEND
+      value: "s3"
+    - name: AUTHENTIK_STORAGE__MEDIA__S3__REGION
+      value: "auto"
+    - name: AUTHENTIK_STORAGE__MEDIA__S3__ENDPOINT
+      value: "https://32e21cb26175efbbdbd48a4ce2d76d39.r2.cloudflarestorage.com"
+    - name: AUTHENTIK_STORAGE__MEDIA__S3__BUCKET_NAME
+      value: "authentik"
+    - name: AUTHENTIK_STORAGE__MEDIA__S3__USE_SSL
+      value: "true"
+    - name: AUTHENTIK_STORAGE__MEDIA__S3__ACCESS_KEY
+      valueFrom:
+        secretKeyRef:
+          name: s3-client-id-eso
+          key: s3-client-id
+    - name: AUTHENTIK_STORAGE__MEDIA__S3__SECRET_KEY
+      valueFrom:
+        secretKeyRef:
+          name: s3-client-secret-eso
+          key: s3-client-secret
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+
+authentik:
+  log_level: error
+  error_reporting:
+    enabled: true
+  postgresql: {}
+  redis: {}
+
+server:
+  replicas: 1
+  livelinessProbe:
+    timeoutSeconds: 30
+  readinessProbe:
+    timeoutSeconds: 30
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    annotations:
+      cert-manager.io/cluster-issuer: "cloudflare-clusterissuer"
+      traefik.ingress.kubernetes.io/router.entrypoints: "websecure"
+      traefik.ingress.kubernetes.io/router.tls: "true"
+    hosts:
+      - auth.mcb-svc.work
+    tls:
+      - secretName: cloudflare-wildcard-cert-tls
+        hosts:
+          - auth.mcb-svc.work
+  # add a tmpfs volume that will replace /dev/shm
+  volumes:
+    - name: devshm
+      emptyDir:
+        medium: Memory
+        sizeLimit: 64Mi   # adjust if needed
+
+  # mount that volume at /dev/shm in the main container
+  volumeMounts:
+    - name: devshm
+      mountPath: /dev/shm
+  initContainers:
+    - name: fix-shm
+      image: busybox
+      command: ["sh", "-c", "chmod 1777 /dev/shm"]
+      securityContext:
+        runAsUser: 0
+      volumeMounts:
+        - name: devshm
+          mountPath: /dev/shm
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+            - key: topology.kubernetes.io/region
+              operator: In
+              values:
+                - vn-prod-01
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 50
+          preference:
+            matchExpressions:
+              - key: topology.kubernetes.io/region
+                operator: In
+                values:
+                  - sg-prod-01
+
+
+

@@ -1,0 +1,22 @@
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: argocd-webhook-token-eso
+  namespace: argocd-system
+  labels:
+    app.kubernetes.io/part-of: argocd
+spec:
+  refreshInterval: 24h
+  secretStoreRef:
+    name: vault-backend
+    kind: ClusterSecretStore
+  target:
+    name: argocd-webhook-token-eso
+    creationPolicy: Owner
+  data:
+    - secretKey: token
+      remoteRef:
+        key: docker-secrets
+        property: argocd-webhook-token
+  
+

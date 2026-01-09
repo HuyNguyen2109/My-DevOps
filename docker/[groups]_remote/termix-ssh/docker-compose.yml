@@ -1,0 +1,27 @@
+services:
+  server:
+    image: ghcr.io/lukegus/termix:latest
+    volumes:
+      - ${MASTER_DATA_FOLDER}/termix:/app/data
+    networks:
+      - traefik-internetwork
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.codename == ${SWARM_NODE_CODENAME}
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: "128M"
+        reservations:
+          cpus: "0.1"
+          memory: "64M"
+      restart_policy:
+        condition: any
+    environment:
+      PORT: "7080"
+
+networks:
+  traefik-internetwork:
+    external: true

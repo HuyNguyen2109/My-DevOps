@@ -1,0 +1,5 @@
+oauth: {}
+installCRDs: true
+operatorConfig:
+  nodeSelector:
+    topology.kubernetes.io/region: "sg-prod-01"
