@@ -42,7 +42,7 @@ docker stack rm "$STACK_NAME" >/dev/null 2>&1 || true
 # === Env ===
 log "Setting environment variables for deployment..."
 export INSTANCE_IMAGE_TAG="v1-distroless"
-export S3_REGION="auto"
+export S3_REGION="us-east"
 export S3_ENDPOINT="https://s3.us-east-005.backblazeb2.com"
 export S3_BUCKET="McBourdeux-NAS-Backup"
 export S3_ACCESS_KEY_ID=$(vault kv get -field=s3-client-id kubernetes/docker-secrets)
