@@ -103,6 +103,10 @@ SSH Security:
   attacks. On first run, the script will scan and store host keys for all nodes
   in ${SSH_CREDENTIALS_DIR}/known_hosts. Subsequent runs will verify hosts
   against these stored keys.
+  
+  ⚠️  SECURITY WARNING: The initial host key scan trusts the first key received.
+  For maximum security, perform the first run from a trusted network or manually
+  verify the host keys after collection.
 
 Examples:
   # Full setup
@@ -239,7 +243,7 @@ initialize_known_hosts() {
       hostname_exists=true
     fi
     
-    if [ "$ip_exists" = true ] && [ "$hostname_exists" = true ]; then
+    if $ip_exists && $hostname_exists; then
       log "  ✓ $hostname ($public_ip) - Host key already in known_hosts"
       continue
     fi
@@ -258,14 +262,14 @@ initialize_known_hosts() {
       err "  ✗ $hostname ($public_ip) - Failed to scan host key"
       # Log the error details if available
       if [ -s "$scan_error" ]; then
-        err "     Error details: $(cat "$scan_error" | head -n 3)"
+        err "     Error details: $(head -n 3 "$scan_error")"
       fi
     fi
     
     rm -f "$scan_error"
   done
   
-  if [ $failed_count -gt 0 ]; then
+  if [ "$failed_count" -gt 0 ]; then
     err "Failed to add $failed_count host key(s) to known_hosts."
     err "Please ensure all nodes are reachable and SSH is running."
     exit 1
