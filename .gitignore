@@ -42,3 +42,4 @@ Thumbs.db
 
 # Some specific files
 .default-*.txt
+*/.ssh-credentials/*

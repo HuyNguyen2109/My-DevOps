@@ -1,0 +1,11 @@
+# Ignore all SSH credential files (prefixed with ".")
+.*
+
+# But keep this .gitignore
+!.gitignore
+!*.md
+
+# Also ignore any backup files
+*.bak
+*.backup
+*~
