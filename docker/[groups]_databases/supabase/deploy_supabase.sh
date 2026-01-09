@@ -69,8 +69,9 @@ if [ -z "$SUPABASE_POSTGRES_PASSWORD" ]; then
     warn "⚠️  supabase-postgres-password not found in Vault. Generating random password (alphanumeric only)..."
     # Generate password with only alphanumeric characters to avoid special character issues
     export SUPABASE_POSTGRES_PASSWORD=$(openssl rand -base64 32 | tr -dc 'A-Za-z0-9' | head -c 32)
-    log "Generated password: $SUPABASE_POSTGRES_PASSWORD"
-    log "Please save this password to Vault: vault kv put kubernetes/docker-secrets supabase-postgres-password=$SUPABASE_POSTGRES_PASSWORD"
+    log "✅ Generated new postgres password (not displayed for security)"
+    log "Please save this password to Vault using: vault kv put kubernetes/docker-secrets supabase-postgres-password=<generated-password>"
+    log "To retrieve the password from Vault: vault kv get -field=supabase-postgres-password kubernetes/docker-secrets"
 fi
 
 # URL-encode the password for use in connection strings
@@ -81,8 +82,9 @@ export SUPABASE_JWT_SECRET=$(vault kv get -field=supabase-jwt-secret kubernetes/
 if [ -z "$SUPABASE_JWT_SECRET" ]; then
     warn "⚠️  supabase-jwt-secret not found in Vault. Generating random secret..."
     export SUPABASE_JWT_SECRET=$(openssl rand -base64 64)
-    log "Generated JWT secret: $SUPABASE_JWT_SECRET"
-    log "Please save to Vault: vault kv put kubernetes/docker-secrets supabase-jwt-secret=$SUPABASE_JWT_SECRET"
+    log "✅ Generated new JWT secret (not displayed for security)"
+    log "Please save this secret to Vault using: vault kv put kubernetes/docker-secrets supabase-jwt-secret=<generated-secret>"
+    log "To retrieve the JWT secret from Vault: vault kv get -field=supabase-jwt-secret kubernetes/docker-secrets"
 fi
 
 # Anonymous Key (JWT with role 'anon')
