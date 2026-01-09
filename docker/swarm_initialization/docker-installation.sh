@@ -39,6 +39,7 @@ DOCKER_INSTALL_URL="https://get.docker.com"
 WIREGUARD_PORT="51821"                  # Wireguard listen port
 WIREGUARD_SUBNET="10.50.0.0/24"         # Wireguard network subnet
 WIREGUARD_INTERFACE="wg0"               # Wireguard interface name
+SSH_KEYSCAN_TIMEOUT="30"                # Timeout for ssh-keyscan in seconds
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SSH_CREDENTIALS_DIR="${SCRIPT_DIR}/.ssh-credentials"
 SSH_KNOWN_HOSTS_FILE="${SCRIPT_DIR}/.ssh-credentials/known_hosts"
@@ -226,21 +227,42 @@ initialize_known_hosts() {
   for node in "${SWARM_NODES[@]}"; do
     IFS=':' read -r hostname role public_ip wg_ip <<< "$node"
     
-    # Check if host key already exists in known_hosts
+    # Check if host key already exists in known_hosts (check both hostname and IP)
+    local ip_exists=false
+    local hostname_exists=false
+    
     if ssh-keygen -F "$public_ip" -f "$SSH_KNOWN_HOSTS_FILE" >/dev/null 2>&1; then
+      ip_exists=true
+    fi
+    
+    if ssh-keygen -F "$hostname" -f "$SSH_KNOWN_HOSTS_FILE" >/dev/null 2>&1; then
+      hostname_exists=true
+    fi
+    
+    if [ "$ip_exists" = true ] && [ "$hostname_exists" = true ]; then
       log "  ✓ $hostname ($public_ip) - Host key already in known_hosts"
       continue
     fi
     
     # Scan and add host key
     log "  Scanning host key for $hostname ($public_ip)..."
-    if ssh-keyscan -H -T 10 "$public_ip" >> "$SSH_KNOWN_HOSTS_FILE" 2>/dev/null; then
+    local scan_error
+    scan_error=$(mktemp)
+    
+    # Scan by IP and hostname to capture both
+    if ssh-keyscan -H -T "$SSH_KEYSCAN_TIMEOUT" "$public_ip" "$hostname" >> "$SSH_KNOWN_HOSTS_FILE" 2>"$scan_error"; then
       ((added_count++))
       log "  ✓ $hostname ($public_ip) - Host key added to known_hosts"
     else
       ((failed_count++))
       err "  ✗ $hostname ($public_ip) - Failed to scan host key"
+      # Log the error details if available
+      if [ -s "$scan_error" ]; then
+        err "     Error details: $(cat "$scan_error" | head -n 3)"
+      fi
     fi
+    
+    rm -f "$scan_error"
   done
   
   if [ $failed_count -gt 0 ]; then
