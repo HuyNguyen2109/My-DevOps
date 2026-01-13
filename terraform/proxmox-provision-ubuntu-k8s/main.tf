@@ -80,6 +80,8 @@ resource "proxmox_virtual_environment_file" "user_data_cloud_config" {
       - qemu-guest-agent
       - net-tools
       - curl
+      - ca-certificates
+      - gnupg
     runcmd:
       - echo "${data.vault_generic_secret.terraform.data["cloudflare-origin-ca-pem-b64"]}" | base64 -d > /etc/ssl/certs/cloudflare-origin-ca.pem
       - chmod 0644 /etc/ssl/certs/cloudflare-origin-ca.pem
@@ -93,7 +95,10 @@ resource "proxmox_virtual_environment_file" "user_data_cloud_config" {
         grep -qxF "14.225.218.148 vn2.mcb-svc.work" /etc/hosts || \
         echo "14.225.218.148 vn2.mcb-svc.work" >> /etc/hosts
       - sudo apt update && sudo apt upgrade -y
-      - curl -fsSL https://tailscale.com/install.sh | sh
+      - curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg | sudo tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
+      - curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.tailscale-keyring.list | sudo tee /etc/apt/sources.list.d/tailscale.list
+      - sudo apt update
+      - sudo apt install -y tailscale
       - sudo tailscale up --authkey ${data.vault_generic_secret.terraform.data["ts-auth-key"]} --accept-routes --accept-dns=false --exit-node=
       - echo "done" > /tmp/cloud-config.done
     EOF
