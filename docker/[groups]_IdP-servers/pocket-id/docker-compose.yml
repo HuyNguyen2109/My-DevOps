@@ -12,8 +12,6 @@ services:
       db-internetwork: {}
     environment:
       APP_URL: ${APP_URL}
-      DB_PROVIDER: "postgres"
-      KEYS_STORAGE: "database"
       MAXMIND_LICENSE_KEY_FILE: "/run/secrets/maxmind_geoip_key"
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
       DB_CONNECTION_STRING: ${DB_CONNECTION_STRING}

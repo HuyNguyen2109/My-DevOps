@@ -41,7 +41,7 @@ fi
 docker stack rm "$STACK_NAME" >/dev/null 2>&1 || true
 # === Env ===
 log "Setting environment variables for deployment..."
-export INSTANCE_IMAGE_TAG="v1-distroless"
+export INSTANCE_IMAGE_TAG="v2.1-distroless"
 export S3_REGION="us-east"
 export S3_ENDPOINT="https://s3.us-east-005.backblazeb2.com"
 export S3_BUCKET="McBourdeux-NAS-Backup"
@@ -53,7 +53,7 @@ export PG_USER="pocket_id_admin"
 export PG_PASS=$(vault kv get -field=pocketid-db-password kubernetes/docker-secrets)
 export ENCRYPTION_KEY=$(vault kv get -field=pocketid-enc-key kubernetes/docker-secrets)
 export DB_CONNECTION_STRING="postgresql://${PG_USER}:${PG_PASS}@${PG_HOST}:5432/${PG_DB}?sslmode=disable"
-export APP_URL="https://auth.mcb-svc.work"
+export APP_URL="http://auth.mcb-svc.work"
 export SWARM_NODE_CODENAME=$SWARM_NODE_CODENAME
 sleep 5
 # Deploy the stack
