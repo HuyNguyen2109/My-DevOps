@@ -7,7 +7,8 @@ warn() { printf '\033[1;33m[WARN]\033[0m %s\n' "$*"; }
 STACK_NAME="postgres-cluster"
 POSTGRES_EXTENDED_CONF="postgres-extended-conf"
 POSTGRES_HBA_FILE="pg-hba-conf"
-PGBOUNCER_INI="pgbouncer-ini"
+PGBOUNCER_TRANSACTION_INI="pgbouncer-transaction-ini"
+PGBOUNCER_SESSION_INI="pgbouncer-session-ini"
 PGBOUNCER_USERLIST="pgbouncer-userlist"
 MASTER_DATA_FOLDER="/mnt/docker/data"
 REQUIRED_DIRECTORY="postgres"
@@ -121,7 +122,7 @@ docker secret rm postgres-root-password >/dev/null 2>&1 || true
 echo -n "$POSTGRES_PASSWORD" | docker secret create postgres-root-password - >/dev/null 2>&1 || true
 
 # === Export environment variables ===
-export IMAGE_TAG="17-alpine3.23"
+export IMAGE_TAG="16.11-alpine3.23"
 export PGBOUNCER_TAG="latest"
 export MASTER_DATA_FOLDER=$MASTER_DATA_FOLDER
 export SWARM_NODE_CODENAME=$SWARM_NODE_CODENAME
@@ -131,7 +132,8 @@ export PGADMIN_DEFAULT_EMAIL="JohnasHuy21091996@gmail.com"
 log "Creating Docker configs..."
 docker config rm $POSTGRES_EXTENDED_CONF >/dev/null 2>&1 || true
 docker config rm $POSTGRES_HBA_FILE >/dev/null 2>&1 || true
-docker config rm $PGBOUNCER_INI >/dev/null 2>&1 || true
+docker config rm $PGBOUNCER_TRANSACTION_INI >/dev/null 2>&1 || true
+docker config rm $PGBOUNCER_SESSION_INI >/dev/null 2>&1 || true
 docker config rm $PGBOUNCER_USERLIST >/dev/null 2>&1 || true
 
 # PostgreSQL extended configuration
@@ -212,7 +214,7 @@ host    replication     all             0.0.0.0/0               md5
 EOF
 
 # PgBouncer configuration (edoburu/pgbouncer image)
-cat <<EOF | docker config create $PGBOUNCER_INI - >/dev/null 2>&1 || true
+cat <<EOF | docker config create $PGBOUNCER_TRANSACTION_INI - >/dev/null 2>&1 || true
 [databases]
 * = host=postgres port=5432
 
@@ -226,6 +228,38 @@ auth_query = SELECT usename, passwd FROM pg_shadow WHERE usename=\$1
 admin_users = postgres
 stats_users = postgres
 pool_mode = transaction
+max_client_conn = 2000
+default_pool_size = 50
+min_pool_size = 10
+reserve_pool_size = 10
+reserve_pool_timeout = 5
+server_lifetime = 3600
+server_idle_timeout = 600
+server_connect_timeout = 15
+server_login_retry = 5
+query_timeout = 300
+query_wait_timeout = 120
+client_idle_timeout = 0
+ignore_startup_parameters = extra_float_digits
+log_connections = 1
+log_disconnections = 1
+log_pooler_errors = 1
+EOF
+
+cat <<EOF | docker config create $PGBOUNCER_SESSION_INI - >/dev/null 2>&1 || true
+[databases]
+* = host=postgres port=5432
+
+[pgbouncer]
+listen_addr = 0.0.0.0
+listen_port = 5432
+auth_type = md5
+auth_file = /etc/pgbouncer/userlist.txt
+auth_user = postgres
+auth_query = SELECT usename, passwd FROM pg_shadow WHERE usename=\$1
+admin_users = postgres
+stats_users = postgres
+pool_mode = session
 max_client_conn = 2000
 default_pool_size = 50
 min_pool_size = 10
