@@ -7,11 +7,11 @@ services:
       - ${PRIMARY_DATA_FOLDER}/postgres-primary:/var/lib/postgresql/data
       - ${PRIMARY_DATA_FOLDER}/postgres-primary-archive:/var/lib/postgresql/archive
     configs:
-      - source: postgres-primary-conf
+      - source: postgres-ha-primary-conf
         target: /etc/postgresql/conf.d/extended.conf
-      - source: pg-hba-primary-conf
+      - source: pg-hba-ha-primary-conf
         target: /etc/postgresql/pg_hba.conf
-      - source: postgres-init-replicator
+      - source: postgres-ha-init-replicator
         target: /docker-entrypoint-initdb.d/init-replicator.sh
         mode: 0755
     networks:
@@ -63,9 +63,9 @@ services:
     volumes:
       - ${STANDBY_DATA_FOLDER}/postgres-standby:/var/lib/postgresql/data
     configs:
-      - source: postgres-standby-conf
+      - source: postgres-ha-standby-conf
         target: /etc/postgresql/conf.d/extended.conf
-      - source: pg-hba-standby-conf
+      - source: pg-hba-ha-standby-conf
         target: /etc/postgresql/pg_hba.conf
     networks:
       db-internetwork:
@@ -116,81 +116,68 @@ services:
       retries: 5
       start_period: 120s
 
-  pgbouncer-session:
-    image: edoburu/pgbouncer:${PGBOUNCER_TAG:-latest}
+  # PgCat: Next-gen PostgreSQL Pooler - THE SINGLE ENTRY POINT
+  # Combines connection pooling + read/write splitting + load balancing + failover
+  # Applications connect here → PgCat → DB nodes (primary/standby)
+  pgcat-transaction:
+    image: ghcr.io/postgresml/pgcat:${PGCAT_TAG:-latest}
     configs:
-      - source: pgbouncer-session-ini
-        target: /etc/pgbouncer/pgbouncer.ini
-      - source: pgbouncer-userlist
-        target: /etc/pgbouncer/userlist.txt
+      - source: pgcat-transaction-ha-config
+        target: /etc/pgcat/pgcat.toml
     networks:
       db-internetwork:
         aliases:
-          - pgbouncer-session-ha
-          - pgbouncer-write
+          - pooler-transaction
     deploy:
-      replicas: 2
+      replicas: 1
       restart_policy:
-        condition: on-failure
+        condition: any
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "256M"
+        reservations:
+          cpus: "0.1"
+          memory: "64M"
       placement:
         constraints:
           - node.role == manager
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U postgres || exit 1"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 -U postgres || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 15s
 
-  pgbouncer-transaction:
-    image: edoburu/pgbouncer:${PGBOUNCER_TAG:-latest}
+  pgcat-session:
+    image: ghcr.io/postgresml/pgcat:${PGCAT_TAG:-latest}
     configs:
-      - source: pgbouncer-transaction-ini
-        target: /etc/pgbouncer/pgbouncer.ini
-      - source: pgbouncer-userlist
-        target: /etc/pgbouncer/userlist.txt
+      - source: pgcat-session-ha-config
+        target: /etc/pgcat/pgcat.toml
     networks:
       db-internetwork:
         aliases:
-          - pgbouncer-transaction-ha
+          - pooler-session
     deploy:
-      replicas: 2
+      replicas: 1
       restart_policy:
-        condition: on-failure
+        condition: any
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "256M"
+        reservations:
+          cpus: "0.1"
+          memory: "64M"
       placement:
         constraints:
           - node.role == manager
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U postgres || exit 1"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 -U postgres || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
-
-  pgbouncer-read:
-    image: edoburu/pgbouncer:${PGBOUNCER_TAG:-latest}
-    configs:
-      - source: pgbouncer-read-ini
-        target: /etc/pgbouncer/pgbouncer.ini
-      - source: pgbouncer-userlist
-        target: /etc/pgbouncer/userlist.txt
-    networks:
-      db-internetwork:
-        aliases:
-          - pgbouncer-read-ha
-    deploy:
-      replicas: 2
-      restart_policy:
-        condition: on-failure
-      placement:
-        constraints:
-          - node.role == manager
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U postgres || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+      start_period: 15s
 
 networks:
   db-internetwork:
@@ -201,21 +188,17 @@ secrets:
     external: true
 
 configs:
-  postgres-primary-conf:
+  postgres-ha-primary-conf:
     external: true
-  pg-hba-primary-conf:
+  pg-hba-ha-primary-conf:
     external: true
-  postgres-init-replicator:
+  postgres-ha-init-replicator:
     external: true
-  postgres-standby-conf:
+  postgres-ha-standby-conf:
     external: true
-  pg-hba-standby-conf:
+  pg-hba-ha-standby-conf:
     external: true
-  pgbouncer-session-ini:
+  pgcat-transaction-ha-config:
     external: true
-  pgbouncer-transaction-ini:
-    external: true
-  pgbouncer-read-ini:
-    external: true
-  pgbouncer-userlist:
+  pgcat-session-ha-config:
     external: true

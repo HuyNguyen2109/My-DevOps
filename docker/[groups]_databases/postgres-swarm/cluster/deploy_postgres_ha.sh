@@ -4,15 +4,13 @@ err() { printf '\033[1;31m[ERROR]\033[0m %s\n' "$*" >&2; }
 warn() { printf '\033[1;33m[WARN]\033[0m %s\n' "$*"; }
 
 STACK_NAME="postgres-cluster-ha"
-POSTGRES_PRIMARY_CONF="postgres-primary-conf"
-POSTGRES_STANDBY_CONF="postgres-standby-conf"
-POSTGRES_INIT_REPLICATOR="postgres-init-replicator"
-PG_HBA_PRIMARY_CONF="pg-hba-primary-conf"
-PG_HBA_STANDBY_CONF="pg-hba-standby-conf"
-PGBOUNCER_SESSION_INI="pgbouncer-session-ini"
-PGBOUNCER_TRANSACTION_INI="pgbouncer-transaction-ini"
-PGBOUNCER_READ_INI="pgbouncer-read-ini"
-PGBOUNCER_USERLIST="pgbouncer-userlist"
+POSTGRES_PRIMARY_CONF="postgres-ha-primary-conf"
+POSTGRES_STANDBY_CONF="postgres-ha-standby-conf"
+POSTGRES_INIT_REPLICATOR="postgres-ha-init-replicator"
+PG_HBA_PRIMARY_CONF="pg-hba-ha-primary-conf"
+PG_HBA_STANDBY_CONF="pg-hba-ha-standby-conf"
+PGCAT_TRANSACTION_CONFIG="pgcat-transaction-ha-config"
+PGCAT_SESSION_CONFIG="pgcat-session-ha-config"
 
 PRIMARY_NODE_CODENAME=""
 STANDBY_NODE_CODENAME=""
@@ -132,14 +130,19 @@ for VAR in "${REQUIRED_VARS[@]}"; do
 done
 
 log "Fetching secrets from Vault..."
-POSTGRES_PASSWORD=$(vault kv get -field=postgres-root-password kubernetes/docker-secrets)
+POSTGRES_PASSWORD=$(vault kv get -field=postgres-root-password kubernetes/docker-secrets 2>/dev/null)
+
+if [ -z "$POSTGRES_PASSWORD" ]; then
+  err "Failed to fetch password from Vault. Ensure Vault is accessible."
+  exit 1
+fi
 
 log "Creating Docker secrets..."
 docker secret rm postgres-root-password >/dev/null 2>&1 || true
 echo -n "$POSTGRES_PASSWORD" | docker secret create postgres-root-password - >/dev/null 2>&1 || true
 
 export IMAGE_TAG="16-alpine"
-export PGBOUNCER_TAG="latest"
+export PGCAT_TAG="v1.2.0"
 export PRIMARY_DATA_FOLDER="$PRIMARY_DATA_FOLDER"
 export STANDBY_DATA_FOLDER="$STANDBY_DATA_FOLDER"
 
@@ -149,10 +152,8 @@ docker config rm $POSTGRES_STANDBY_CONF >/dev/null 2>&1 || true
 docker config rm $POSTGRES_INIT_REPLICATOR >/dev/null 2>&1 || true
 docker config rm $PG_HBA_PRIMARY_CONF >/dev/null 2>&1 || true
 docker config rm $PG_HBA_STANDBY_CONF >/dev/null 2>&1 || true
-docker config rm $PGBOUNCER_SESSION_INI >/dev/null 2>&1 || true
-docker config rm $PGBOUNCER_TRANSACTION_INI >/dev/null 2>&1 || true
-docker config rm $PGBOUNCER_READ_INI >/dev/null 2>&1 || true
-docker config rm $PGBOUNCER_USERLIST >/dev/null 2>&1 || true
+docker config rm $PGCAT_TRANSACTION_CONFIG >/dev/null 2>&1 || true
+docker config rm $PGCAT_SESSION_CONFIG >/dev/null 2>&1 || true
 
 cat <<EOF | docker config create $POSTGRES_PRIMARY_CONF - >/dev/null 2>&1 || true
 listen_addresses = '*'
@@ -272,119 +273,196 @@ host    all             all             192.168.0.0/16          md5
 host    all             all             11.0.0.0/8              md5
 EOF
 
-cat <<EOF | docker config create $PGBOUNCER_SESSION_INI - >/dev/null 2>&1 || true
-[databases]
-* = host=postgres-primary port=5432
+# PgCat configuration - single config for pooling + R/W splitting + load balancing
+cat <<EOF | docker config create $PGCAT_TRANSACTION_CONFIG - >/dev/null 2>&1 || true
+#
+# PgCat Configuration for PostgreSQL HA Cluster
+#
 
-[pgbouncer]
-listen_addr = 0.0.0.0
-listen_port = 5432
-auth_type = md5
-auth_file = /etc/pgbouncer/userlist.txt
-auth_user = postgres
-auth_query = SELECT usename, passwd FROM pg_shadow WHERE usename=\$1
-admin_users = postgres
-stats_users = postgres
-pool_mode = session
-max_client_conn = 500
-default_pool_size = 50
-min_pool_size = 10
-reserve_pool_size = 10
-reserve_pool_timeout = 5
-server_lifetime = 1200
-server_idle_timeout = 300
-server_connect_timeout = 10
-server_login_retry = 3
-client_login_timeout = 30
-query_timeout = 120
-query_wait_timeout = 60
-client_idle_timeout = 300
-ignore_startup_parameters = extra_float_digits,options
-log_connections = 1
-log_disconnections = 1
-log_pooler_errors = 1
+[general]
+host = "0.0.0.0"
+port = 6432
+
+# Prometheus metrics endpoint
+enable_prometheus_exporter = true
+prometheus_exporter_port = 9930
+
+# Connection settings
+connect_timeout = 5000
+idle_timeout = 30000
+server_lifetime = 86400000
+
+# Health check
+healthcheck_timeout = 1000
+healthcheck_delay = 30000
+shutdown_timeout = 60000
+ban_time = 60
+
+# Logging
+log_client_connections = true
+log_client_disconnections = true
+
+# Workers (adjust based on CPU)
+worker_threads = 4
+
+# TCP keepalive
+tcp_keepalives_idle = 5
+tcp_keepalives_count = 5
+tcp_keepalives_interval = 5
+
+# Admin database
+admin_username = "pgcat_admin"
+admin_password = "${POSTGRES_PASSWORD}"
+
+#
+# Pool configuration
+#
+[pools.postgres]
+pool_mode = "transaction"
+load_balancing_mode = "random"
+
+# Route to primary by default for writes, query parser handles reads
+default_role = "any"
+
+# Enable query parsing for automatic read/write splitting
+query_parser_enabled = true
+query_parser_read_write_splitting = true
+
+# Include primary in read load balancing
+primary_reads_enabled = true
+
+# Prepared statements cache
+prepared_statements_cache_size = 500
+
+# Pool-level timeouts
+idle_timeout = 40000
+connect_timeout = 3000
+
+# User configuration
+[pools.postgres.users.0]
+username = "postgres"
+password = "${POSTGRES_PASSWORD}"
+pool_size = 50
+min_pool_size = 5
+statement_timeout = 0
+
+[pools.postgres.users.1]
+username = "replicator"
+password = "${POSTGRES_PASSWORD}"
+pool_size = 10
+min_pool_size = 1
+statement_timeout = 0
+
+# Shard 0 (single shard for non-sharded setup)
+[pools.postgres.shards.0]
+servers = [
+    ["postgres-primary", 5432, "primary"],
+    ["postgres-standby", 5432, "replica"]
+]
+database = "postgres"
 EOF
 
-cat <<EOF | docker config create $PGBOUNCER_TRANSACTION_INI - >/dev/null 2>&1 || true
-[databases]
-* = host=postgres-primary port=5432
+cat <<EOF | docker config create $PGCAT_SESSION_CONFIG - >/dev/null 2>&1 || true
+#
+# PgCat Configuration for PostgreSQL HA Cluster
+#
 
-[pgbouncer]
-listen_addr = 0.0.0.0
-listen_port = 5432
-auth_type = md5
-auth_file = /etc/pgbouncer/userlist.txt
-auth_user = postgres
-auth_query = SELECT usename, passwd FROM pg_shadow WHERE usename=\$1
-admin_users = postgres
-stats_users = postgres
-pool_mode = transaction
-max_client_conn = 1000
-default_pool_size = 50
-min_pool_size = 10
-reserve_pool_size = 10
-reserve_pool_timeout = 3
-server_lifetime = 600
-server_idle_timeout = 120
-server_connect_timeout = 10
-server_login_retry = 3
-client_login_timeout = 30
-query_timeout = 60
-query_wait_timeout = 30
-client_idle_timeout = 180
-ignore_startup_parameters = extra_float_digits,options
-log_connections = 1
-log_disconnections = 1
-log_pooler_errors = 1
-EOF
+[general]
+host = "0.0.0.0"
+port = 6432
 
-cat <<EOF | docker config create $PGBOUNCER_READ_INI - >/dev/null 2>&1 || true
-[databases]
-* = host=postgres-standby port=5432
+# Prometheus metrics endpoint
+enable_prometheus_exporter = true
+prometheus_exporter_port = 9930
 
-[pgbouncer]
-listen_addr = 0.0.0.0
-listen_port = 5432
-auth_type = md5
-auth_file = /etc/pgbouncer/userlist.txt
-auth_user = postgres
-auth_query = SELECT usename, passwd FROM pg_shadow WHERE usename=\$1
-admin_users = postgres
-stats_users = postgres
-pool_mode = transaction
-max_client_conn = 1000
-default_pool_size = 50
-min_pool_size = 10
-reserve_pool_size = 10
-reserve_pool_timeout = 3
-server_lifetime = 600
-server_idle_timeout = 60
-server_connect_timeout = 10
-server_login_retry = 3
-client_login_timeout = 30
-query_timeout = 60
-query_wait_timeout = 15
-client_idle_timeout = 180
-ignore_startup_parameters = extra_float_digits,options
-log_connections = 1
-log_disconnections = 1
-log_pooler_errors = 1
-EOF
+# Connection settings
+connect_timeout = 5000
+idle_timeout = 30000
+server_lifetime = 86400000
 
-POSTGRES_MD5=$(echo -n "${POSTGRES_PASSWORD}postgres" | md5sum | awk '{print $1}')
-REPLICATOR_MD5=$(echo -n "${POSTGRES_PASSWORD}replicator" | md5sum | awk '{print $1}')
-cat <<EOF | docker config create $PGBOUNCER_USERLIST - >/dev/null 2>&1 || true
-"postgres" "md5${POSTGRES_MD5}"
-"replicator" "md5${REPLICATOR_MD5}"
+# Health check
+healthcheck_timeout = 1000
+healthcheck_delay = 30000
+shutdown_timeout = 60000
+ban_time = 60
+
+# Logging
+log_client_connections = true
+log_client_disconnections = true
+
+# Workers (adjust based on CPU)
+worker_threads = 4
+
+# TCP keepalive
+tcp_keepalives_idle = 5
+tcp_keepalives_count = 5
+tcp_keepalives_interval = 5
+
+# Admin database
+admin_username = "pgcat_admin"
+admin_password = "${POSTGRES_PASSWORD}"
+
+#
+# Pool configuration
+#
+[pools.postgres]
+pool_mode = "session"
+load_balancing_mode = "random"
+
+# Route to primary by default for writes, query parser handles reads
+default_role = "any"
+
+# Enable query parsing for automatic read/write splitting
+query_parser_enabled = true
+query_parser_read_write_splitting = true
+
+# Include primary in read load balancing
+primary_reads_enabled = true
+
+# Prepared statements cache
+prepared_statements_cache_size = 500
+
+# Pool-level timeouts
+idle_timeout = 40000
+connect_timeout = 3000
+
+# User configuration
+[pools.postgres.users.0]
+username = "postgres"
+password = "${POSTGRES_PASSWORD}"
+pool_size = 50
+min_pool_size = 5
+statement_timeout = 0
+
+[pools.postgres.users.1]
+username = "replicator"
+password = "${POSTGRES_PASSWORD}"
+pool_size = 10
+min_pool_size = 1
+statement_timeout = 0
+
+# Shard 0 (single shard for non-sharded setup)
+[pools.postgres.shards.0]
+servers = [
+    ["postgres-primary", 5432, "primary"],
+    ["postgres-standby", 5432, "replica"]
+]
+database = "postgres"
 EOF
 
 log "Deploying stack..."
-docker stack deploy -c docker-compose.yml "$STACK_NAME" --detach > /dev/null 2>&1 || true
+docker stack deploy -c docker-compose.yml "$STACK_NAME" --detach
 log "Docker stack '$STACK_NAME' deployed successfully!"
 log ""
+log "Architecture: App → PgCat (pooling + R/W split) → PostgreSQL"
+log ""
 log "Connection endpoints:"
-log "  Primary (session mode): pgbouncer-session:5432"
-log "  Primary (transaction):  pgbouncer-transaction:5432"
-log "  Standby (read-only):    pgbouncer-read:5432"
-log "  Direct primary:         postgres-primary:5432"
-log "  Direct standby:         postgres-standby:5432"
+log "  Single endpoint (recommended): pgcat:6432 or postgres-ha:6432"
+log "  Direct primary (write):        postgres-primary:5432"
+log "  Direct standby (read):         postgres-standby:5432"
+log ""
+log "Query routing (automatic via PgCat query parser):"
+log "  - SELECT queries → load balanced to replica"
+log "  - INSERT/UPDATE/DELETE → primary"
+log ""
+log "Prometheus metrics: http://<any-manager>:9930/metrics"
