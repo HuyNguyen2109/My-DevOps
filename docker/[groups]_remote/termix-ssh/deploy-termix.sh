@@ -5,7 +5,7 @@ err() { printf '\033[1;31m[ERROR]\033[0m %s\n' "$*" >&2; }
 warn() { printf '\033[1;33m[WARN]\033[0m %s\n' "$*"; }
 # ----------------------
 STACK_NAME="termix-ssh"
-MASTER_DATA_FOLDER="/mnt/docker/data"
+MASTER_DATA_FOLDER=""
 REQUIRED_DIRECTORY="termix"
 
 # === Parse command-line arguments ===
@@ -49,16 +49,19 @@ case "$SWARM_NODE_CODENAME" in
     SSH_KEY="$HOME/ssh-keys/oracle.key"
     NODE_USER="root"
     NODES=($SWARM_MANAGER_HOSTNAME)
+    MASTER_DATA_FOLDER="/mnt/docker/data"
     ;;
   beta)
     SSH_KEY="$HOME/ssh-keys/oracle.key"
     NODE_USER="root"
     NODES=($SWARM_WORKER_VN_HOSTNAME)
+    MASTER_DATA_FOLDER="/mnt/docker/data"
     ;;
   gamma)
     SSH_KEY="$HOME/ssh-keys/oracle.key"
     NODE_USER="ubuntu"
     NODES=($SWARM_WORKER_SG_HOSTNAME)
+    MASTER_DATA_FOLDER="/data-drive/docker/data"
     ;;
   *)
     err "❌ Unknown SWARM_NODE_CODENAME: $SWARM_NODE_CODENAME"
