@@ -20,7 +20,7 @@ services:
         delay: 5s
         failure_action: rollback
       restart_policy:
-        condition: any
+        condition: on-failure
       resources:
         limits:
           cpus: "3"

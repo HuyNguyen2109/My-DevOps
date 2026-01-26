@@ -116,14 +116,13 @@ services:
       retries: 5
       start_period: 120s
 
-  # PgCat: Next-gen PostgreSQL Pooler - THE SINGLE ENTRY POINT
-  # Combines connection pooling + read/write splitting + load balancing + failover
-  # Applications connect here → PgCat → DB nodes (primary/standby)
-  pgcat-transaction:
-    image: ghcr.io/postgresml/pgcat:${PGCAT_TAG:-latest}
+  # PgDog: Next-gen PostgreSQL Sharder, Pooler, Load Balancer
+  # Applications connect here → PgDog → DB nodes (primary/standby)
+  pgdog-transaction:
+    image: ghcr.io/pgdogdev/pgdog:latest
     configs:
-      - source: pgcat-transaction-ha-config
-        target: /etc/pgcat/pgcat.toml
+      - source: pgdog-transaction-config
+        target: /etc/pgdog/pgdog.toml
     networks:
       db-internetwork:
         aliases:
@@ -143,17 +142,17 @@ services:
         constraints:
           - node.role == manager
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 -U postgres || exit 1"]
+      test: ["CMD-SHELL", "pgdog --healthcheck"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 15s
 
-  pgcat-session:
-    image: ghcr.io/postgresml/pgcat:${PGCAT_TAG:-latest}
+  pgdog-session:
+    image: ghcr.io/pgdogdev/pgdog:latest
     configs:
-      - source: pgcat-session-ha-config
-        target: /etc/pgcat/pgcat.toml
+      - source: pgdog-session-config
+        target: /etc/pgdog/pgdog.toml
     networks:
       db-internetwork:
         aliases:
@@ -173,7 +172,7 @@ services:
         constraints:
           - node.role == manager
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 -U postgres || exit 1"]
+      test: ["CMD-SHELL", "pgdog --healthcheck"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -198,7 +197,7 @@ configs:
     external: true
   pg-hba-ha-standby-conf:
     external: true
-  pgcat-transaction-ha-config:
-    external: true
-  pgcat-session-ha-config:
-    external: true
+  pgdog-transaction-config:
+    file: ./pgdog-configs/pgdog-transaction.toml
+  pgdog-session-config:
+    file: ./pgdog-configs/pgdog-session.toml

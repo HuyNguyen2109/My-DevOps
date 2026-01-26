@@ -10,7 +10,7 @@ POSTGRES_HBA_FILE="pg-hba-conf"
 PGBOUNCER_TRANSACTION_INI="pgbouncer-transaction-ini"
 PGBOUNCER_SESSION_INI="pgbouncer-session-ini"
 PGBOUNCER_USERLIST="pgbouncer-userlist"
-MASTER_DATA_FOLDER="/mnt/docker/data"
+MASTER_DATA_FOLDER=""
 REQUIRED_DIRECTORY="postgres"
 
 # === Parse command-line arguments ===
@@ -54,16 +54,19 @@ case "$SWARM_NODE_CODENAME" in
     SSH_KEY="$HOME/ssh-keys/oracle.key"
     NODE_USER="root"
     NODES=($SWARM_MANAGER_HOSTNAME)
+    MASTER_DATA_FOLDER="/mnt/docker/data"
     ;;
   beta)
     SSH_KEY="$HOME/ssh-keys/oracle.key"
     NODE_USER="root"
     NODES=($SWARM_WORKER_VN_HOSTNAME)
+    MASTER_DATA_FOLDER="/mnt/docker/data"
     ;;
   gamma)
     SSH_KEY="$HOME/ssh-keys/oracle.key"
     NODE_USER="ubuntu"
     NODES=($SWARM_WORKER_SG_HOSTNAME)
+    MASTER_DATA_FOLDER="/data-drive/docker/data"
     ;;
   *)
     err "❌ Unknown SWARM_NODE_CODENAME: $SWARM_NODE_CODENAME"
@@ -122,7 +125,7 @@ docker secret rm postgres-root-password >/dev/null 2>&1 || true
 echo -n "$POSTGRES_PASSWORD" | docker secret create postgres-root-password - >/dev/null 2>&1 || true
 
 # === Export environment variables ===
-export IMAGE_TAG="16.11-alpine3.23"
+export IMAGE_TAG="16.11"
 export PGBOUNCER_TAG="latest"
 export MASTER_DATA_FOLDER=$MASTER_DATA_FOLDER
 export SWARM_NODE_CODENAME=$SWARM_NODE_CODENAME

@@ -1,0 +1,28 @@
+# PgDog `pgdog.toml` - session pool
+[general]
+max_standby_archive_delay = 60s
+shared_buffers = 512MB
+effective_cache_size = 1536MB
+work_mem = 16MB
+maintenance_work_mem = 128MB
+wal_compression = on
+max_wal_size = 2GB
+min_wal_size = 512MB
+checkpoint_timeout = 10min
+checkpoint_completion_target = 0.9
+autovacuum = on
+autovacuum_naptime = 60s
+autovacuum_max_workers = 1
+max_parallel_workers_per_gather = 1
+max_parallel_workers = 1
+max_worker_processes = 4
+log_destination = 'stderr'
+logging_collector = on
+log_directory = 'log'
+log_filename = 'postgresql-standby-%Y-%m-%d.log'
+log_rotation_age = 1d
+log_rotation_size = 100MB
+log_min_duration_statement = 2000
+log_checkpoints = on
+log_connections = on
+log_disconnections = on
