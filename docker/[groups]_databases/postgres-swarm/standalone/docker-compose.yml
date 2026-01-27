@@ -66,12 +66,14 @@ services:
           - pgbouncer-transaction
       traefik-internetwork: {}
     deploy:
-      replicas: 1
+      mode: replicated
+      replicas: 2
       restart_policy:
         condition: on-failure
       placement:
+        max_replicas_per_node: 1
         constraints:
-          - node.role == manager
+          - node.labels.db-pool == true
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U postgres || exit 1"]
       interval: 10s
@@ -92,12 +94,14 @@ services:
           - pgbouncer-session
       traefik-internetwork: {}
     deploy:
-      replicas: 1
+      mode: replicated
+      replicas: 2
       restart_policy:
         condition: on-failure
       placement:
+        max_replicas_per_node: 1
         constraints:
-          - node.role == manager
+          - node.labels.db-pool == true
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U postgres || exit 1"]
       interval: 10s

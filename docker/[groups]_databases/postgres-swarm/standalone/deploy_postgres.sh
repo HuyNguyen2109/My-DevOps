@@ -290,5 +290,5 @@ EOF
 
 # Deploy the stack
 log "🚀 Deploying stack..."
-docker stack deploy -c docker-compose.yml "$STACK_NAME" --detach > /dev/null 2>&1 || true
+docker stack deploy -c docker-compose.yml "$STACK_NAME" --detach
 log "✅ Docker stack '$STACK_NAME' deployed successfully!"
