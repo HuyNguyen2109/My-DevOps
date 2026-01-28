@@ -43,12 +43,10 @@ services:
       - POSTGRES_DB=postgres
       - POSTGRES_HOST_AUTH_METHOD=md5
       - POSTGRES_INITDB_ARGS=--auth-host=md5 --auth-local=md5
-    command:
-      - postgres
-      - -c
-      - config_file=/etc/postgresql/conf.d/extended.conf
-      - -c
-      - hba_file=/etc/postgresql/pg_hba.conf
+    command: >
+      sh -c "chown -R 999:999 /wal-archive && exec docker-entrypoint.sh postgres
+        -c config_file=/etc/postgresql/conf.d/extended.conf
+        -c hba_file=/etc/postgresql/pg_hba.conf"
     healthcheck:
       test: ["CMD-SHELL", "ps aux | grep '[p]ostgres'"]
       interval: 30s

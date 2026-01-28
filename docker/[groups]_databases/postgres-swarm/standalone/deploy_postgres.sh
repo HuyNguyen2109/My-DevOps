@@ -138,6 +138,7 @@ export PGBOUNCER_TAG="latest"
 export MASTER_DATA_FOLDER=$MASTER_DATA_FOLDER
 export SWARM_NODE_CODENAME=$SWARM_NODE_CODENAME
 export PGADMIN_DEFAULT_EMAIL="JohnasHuy21091996@gmail.com"
+export PGDATA="/var/lib/postgresql/data/"
 
 # === Create Docker Configs ===
 log "Creating Docker configs..."
@@ -176,7 +177,7 @@ wal_level = replica
 wal_buffers = -1
 
 archive_mode = on
-archive_command = 'test ! -f /wal-archive/%f && cp %p /wal-archive/%f'
+archive_command = 'test ! -f /wal-archive/%f && cp %p /wal-archive/%f || echo "ARCHIVE FAIL %p" >> /tmp/archive.log'
 
 max_wal_size = 8GB
 checkpoint_timeout = 10min
