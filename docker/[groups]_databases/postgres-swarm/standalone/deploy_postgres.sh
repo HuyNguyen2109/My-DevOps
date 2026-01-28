@@ -12,6 +12,7 @@ PGBOUNCER_SESSION_INI="pgbouncer-session-ini"
 PGBOUNCER_USERLIST="pgbouncer-userlist"
 MASTER_DATA_FOLDER=""
 REQUIRED_DIRECTORY="postgres"
+REQUIRED_DIRECTORY_WAL="postgres-wal"
 
 # === Parse command-line arguments ===
 SWARM_NODE_CODENAME=""
@@ -90,6 +91,13 @@ for NODE in "${NODES[@]}"; do
     log "  📁 Creating directory $REQUIRED_DIRECTORY..."
     ssh -i $SSH_KEY $NODE_USER@$NODE "sudo mkdir -p $MASTER_DATA_FOLDER/$REQUIRED_DIRECTORY && sudo chown docker:docker $MASTER_DATA_FOLDER/$REQUIRED_DIRECTORY"
   fi
+
+  if ssh -i $SSH_KEY $NODE_USER@$NODE "[ -d $MASTER_DATA_FOLDER/$REQUIRED_DIRECTORY_WAL ]"; then
+    log "  ✓ Directory $REQUIRED_DIRECTORY_WAL already exists, skipping..."
+  else
+    log "  📁 Creating directory $REQUIRED_DIRECTORY_WAL..."
+    ssh -i $SSH_KEY $NODE_USER@$NODE "sudo mkdir -p $MASTER_DATA_FOLDER/$REQUIRED_DIRECTORY_WAL && sudo chown docker:docker $MASTER_DATA_FOLDER/$REQUIRED_DIRECTORY_WAL"
+  fi
 done
 
 # === Remove existing Docker stack ===
@@ -159,15 +167,20 @@ maintenance_work_mem = 1GB
 ############################################
 # WAL & Checkpoints
 ############################################
+fsync = on
+full_page_writes = on
+wal_log_hints = on
+synchronous_commit = on
+
 wal_level = replica
-wal_compression = on
+wal_buffers = -1
+
+archive_mode = on
+archive_command = 'test ! -f /wal-archive/%f && cp %p /wal-archive/%f'
+
 max_wal_size = 8GB
-min_wal_size = 2GB
 checkpoint_timeout = 10min
 checkpoint_completion_target = 0.9
-archive_mode = off
-synchronous_commit = on
-wal_buffers = 64MB
 
 ############################################
 # Autovacuum & Analyze
