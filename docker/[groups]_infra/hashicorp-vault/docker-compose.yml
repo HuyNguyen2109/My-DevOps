@@ -33,7 +33,7 @@ services:
         # condition: on-failure
       placement:
         constraints:
-          - node.role == worker
+          - node.platform.os == linux
           - node.labels.codename == ${SWARM_NODE_CODENAME}
 configs:
   vault-config:

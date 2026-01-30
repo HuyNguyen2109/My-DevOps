@@ -5,6 +5,7 @@ services:
       - postgres-root-password
     volumes:
       - ${MASTER_DATA_FOLDER}/postgres:/var/lib/postgresql/data
+      - ${MASTER_DATA_FOLDER}/postgres-wal:/wal-archive
     configs:
       - source: postgres-extended-conf
         target: /etc/postgresql/conf.d/extended.conf
@@ -20,7 +21,9 @@ services:
         delay: 5s
         failure_action: rollback
       restart_policy:
-        condition: any
+        condition: on-failure
+        delay: 30s
+        max_attempts: 3
       resources:
         limits:
           cpus: "3"
@@ -40,36 +43,66 @@ services:
       - POSTGRES_DB=postgres
       - POSTGRES_HOST_AUTH_METHOD=md5
       - POSTGRES_INITDB_ARGS=--auth-host=md5 --auth-local=md5
-    command:
-      - postgres
-      - -c
-      - config_file=/etc/postgresql/conf.d/extended.conf
-      - -c
-      - hba_file=/etc/postgresql/pg_hba.conf
+    command: >
+      sh -c "chown -R 999:999 /wal-archive && exec docker-entrypoint.sh postgres
+        -c config_file=/etc/postgresql/conf.d/extended.conf
+        -c hba_file=/etc/postgresql/pg_hba.conf"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+      test: ["CMD-SHELL", "ps aux | grep '[p]ostgres'"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+    stop_grace_period: 5m
 
-  pgbouncer:
+  pgbouncer-transaction-mode:
     image: edoburu/pgbouncer:${PGBOUNCER_TAG:-latest}
     configs:
-      - source: pgbouncer-ini
+      - source: pgbouncer-transaction-ini
         target: /etc/pgbouncer/pgbouncer.ini
       - source: pgbouncer-userlist
         target: /etc/pgbouncer/userlist.txt
     networks:
-      - db-internetwork
-      - traefik-internetwork
+      db-internetwork:
+        aliases:
+          - pgbouncer-transaction
+      traefik-internetwork: {}
     deploy:
-      replicas: 1
+      mode: replicated
+      replicas: 2
       restart_policy:
         condition: on-failure
       placement:
+        max_replicas_per_node: 1
         constraints:
-          - node.role == manager
+          - node.labels.db-pool == true
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U postgres || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  pgbouncer-session-mode:
+    image: edoburu/pgbouncer:${PGBOUNCER_TAG:-latest}
+    configs:
+      - source: pgbouncer-session-ini
+        target: /etc/pgbouncer/pgbouncer.ini
+      - source: pgbouncer-userlist
+        target: /etc/pgbouncer/userlist.txt
+    networks:
+      db-internetwork:
+        aliases:
+          - pgbouncer-session
+      traefik-internetwork: {}
+    deploy:
+      mode: replicated
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+      placement:
+        max_replicas_per_node: 1
+        constraints:
+          - node.labels.db-pool == true
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U postgres || exit 1"]
       interval: 10s
@@ -130,7 +163,9 @@ configs:
     external: true
   pg-hba-conf:
     external: true
-  pgbouncer-ini:
+  pgbouncer-transaction-ini:
+    external: true
+  pgbouncer-session-ini:
     external: true
   pgbouncer-userlist:
     external: true

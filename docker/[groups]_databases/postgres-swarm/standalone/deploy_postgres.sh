@@ -7,10 +7,12 @@ warn() { printf '\033[1;33m[WARN]\033[0m %s\n' "$*"; }
 STACK_NAME="postgres-cluster"
 POSTGRES_EXTENDED_CONF="postgres-extended-conf"
 POSTGRES_HBA_FILE="pg-hba-conf"
-PGBOUNCER_INI="pgbouncer-ini"
+PGBOUNCER_TRANSACTION_INI="pgbouncer-transaction-ini"
+PGBOUNCER_SESSION_INI="pgbouncer-session-ini"
 PGBOUNCER_USERLIST="pgbouncer-userlist"
-MASTER_DATA_FOLDER="/mnt/docker/data"
+MASTER_DATA_FOLDER=""
 REQUIRED_DIRECTORY="postgres"
+REQUIRED_DIRECTORY_WAL="postgres-wal"
 
 # === Parse command-line arguments ===
 SWARM_NODE_CODENAME=""
@@ -53,16 +55,19 @@ case "$SWARM_NODE_CODENAME" in
     SSH_KEY="$HOME/ssh-keys/oracle.key"
     NODE_USER="root"
     NODES=($SWARM_MANAGER_HOSTNAME)
+    MASTER_DATA_FOLDER="/mnt/docker/data"
     ;;
   beta)
     SSH_KEY="$HOME/ssh-keys/oracle.key"
     NODE_USER="root"
     NODES=($SWARM_WORKER_VN_HOSTNAME)
+    MASTER_DATA_FOLDER="/mnt/docker/data"
     ;;
   gamma)
     SSH_KEY="$HOME/ssh-keys/oracle.key"
     NODE_USER="ubuntu"
     NODES=($SWARM_WORKER_SG_HOSTNAME)
+    MASTER_DATA_FOLDER="/data-drive/docker/data"
     ;;
   *)
     err "❌ Unknown SWARM_NODE_CODENAME: $SWARM_NODE_CODENAME"
@@ -85,6 +90,13 @@ for NODE in "${NODES[@]}"; do
   else
     log "  📁 Creating directory $REQUIRED_DIRECTORY..."
     ssh -i $SSH_KEY $NODE_USER@$NODE "sudo mkdir -p $MASTER_DATA_FOLDER/$REQUIRED_DIRECTORY && sudo chown docker:docker $MASTER_DATA_FOLDER/$REQUIRED_DIRECTORY"
+  fi
+
+  if ssh -i $SSH_KEY $NODE_USER@$NODE "[ -d $MASTER_DATA_FOLDER/$REQUIRED_DIRECTORY_WAL ]"; then
+    log "  ✓ Directory $REQUIRED_DIRECTORY_WAL already exists, skipping..."
+  else
+    log "  📁 Creating directory $REQUIRED_DIRECTORY_WAL..."
+    ssh -i $SSH_KEY $NODE_USER@$NODE "sudo mkdir -p $MASTER_DATA_FOLDER/$REQUIRED_DIRECTORY_WAL && sudo chown docker:docker $MASTER_DATA_FOLDER/$REQUIRED_DIRECTORY_WAL"
   fi
 done
 
@@ -121,17 +133,19 @@ docker secret rm postgres-root-password >/dev/null 2>&1 || true
 echo -n "$POSTGRES_PASSWORD" | docker secret create postgres-root-password - >/dev/null 2>&1 || true
 
 # === Export environment variables ===
-export IMAGE_TAG="17-alpine3.23"
+export IMAGE_TAG="16.11"
 export PGBOUNCER_TAG="latest"
 export MASTER_DATA_FOLDER=$MASTER_DATA_FOLDER
 export SWARM_NODE_CODENAME=$SWARM_NODE_CODENAME
 export PGADMIN_DEFAULT_EMAIL="JohnasHuy21091996@gmail.com"
+export PGDATA="/var/lib/postgresql/data/"
 
 # === Create Docker Configs ===
 log "Creating Docker configs..."
 docker config rm $POSTGRES_EXTENDED_CONF >/dev/null 2>&1 || true
 docker config rm $POSTGRES_HBA_FILE >/dev/null 2>&1 || true
-docker config rm $PGBOUNCER_INI >/dev/null 2>&1 || true
+docker config rm $PGBOUNCER_TRANSACTION_INI >/dev/null 2>&1 || true
+docker config rm $PGBOUNCER_SESSION_INI >/dev/null 2>&1 || true
 docker config rm $PGBOUNCER_USERLIST >/dev/null 2>&1 || true
 
 # PostgreSQL extended configuration
@@ -154,15 +168,20 @@ maintenance_work_mem = 1GB
 ############################################
 # WAL & Checkpoints
 ############################################
+fsync = on
+full_page_writes = on
+wal_log_hints = on
+synchronous_commit = on
+
 wal_level = replica
-wal_compression = on
+wal_buffers = -1
+
+archive_mode = on
+archive_command = 'test ! -f /wal-archive/%f && cp %p /wal-archive/%f || echo "ARCHIVE FAIL %p" >> /tmp/archive.log'
+
 max_wal_size = 8GB
-min_wal_size = 2GB
 checkpoint_timeout = 10min
 checkpoint_completion_target = 0.9
-archive_mode = off
-synchronous_commit = on
-wal_buffers = 64MB
 
 ############################################
 # Autovacuum & Analyze
@@ -212,7 +231,7 @@ host    replication     all             0.0.0.0/0               md5
 EOF
 
 # PgBouncer configuration (edoburu/pgbouncer image)
-cat <<EOF | docker config create $PGBOUNCER_INI - >/dev/null 2>&1 || true
+cat <<EOF | docker config create $PGBOUNCER_TRANSACTION_INI - >/dev/null 2>&1 || true
 [databases]
 * = host=postgres port=5432
 
@@ -244,6 +263,38 @@ log_disconnections = 1
 log_pooler_errors = 1
 EOF
 
+cat <<EOF | docker config create $PGBOUNCER_SESSION_INI - >/dev/null 2>&1 || true
+[databases]
+* = host=postgres port=5432
+
+[pgbouncer]
+listen_addr = 0.0.0.0
+listen_port = 5432
+auth_type = md5
+auth_file = /etc/pgbouncer/userlist.txt
+auth_user = postgres
+auth_query = SELECT usename, passwd FROM pg_shadow WHERE usename=\$1
+admin_users = postgres
+stats_users = postgres
+pool_mode = session
+max_client_conn = 2000
+default_pool_size = 50
+min_pool_size = 10
+reserve_pool_size = 10
+reserve_pool_timeout = 5
+server_lifetime = 3600
+server_idle_timeout = 600
+server_connect_timeout = 15
+server_login_retry = 5
+query_timeout = 300
+query_wait_timeout = 120
+client_idle_timeout = 0
+ignore_startup_parameters = extra_float_digits
+log_connections = 1
+log_disconnections = 1
+log_pooler_errors = 1
+EOF
+
 # PgBouncer userlist (MD5 hash format: "user" "md5<hash>")
 # Generate MD5 hash: echo -n "password<username>" | md5sum
 POSTGRES_MD5=$(echo -n "${POSTGRES_PASSWORD}postgres" | md5sum | awk '{print $1}')
@@ -253,5 +304,5 @@ EOF
 
 # Deploy the stack
 log "🚀 Deploying stack..."
-docker stack deploy -c docker-compose.yml "$STACK_NAME" --detach > /dev/null 2>&1 || true
+docker stack deploy -c docker-compose.yml "$STACK_NAME" --detach
 log "✅ Docker stack '$STACK_NAME' deployed successfully!"

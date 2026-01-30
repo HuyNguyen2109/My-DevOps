@@ -7,7 +7,7 @@ warn() { printf '\033[1;33m[WARN]\033[0m %s\n' "$*"; }
 # Define stack name (change this as needed)
 STACK_NAME="hashicorp"
 CONFIG_FILE="vault-config"
-MASTER_DATA_FOLDER="/mnt/docker/data"
+MASTER_DATA_FOLDER=""
 REQUIRED_DIRECTORY="vault"
 REQUIRED_SUB_DIR=("data" "logs")
 
@@ -52,16 +52,19 @@ case "$SWARM_NODE_CODENAME" in
     SSH_KEY="$HOME/ssh-keys/oracle.key"
     NODE_USER="root"
     NODES=($SWARM_MANAGER_HOSTNAME)
+    MASTER_DATA_FOLDER="/mnt/docker/data"
     ;;
   beta)
     SSH_KEY="$HOME/ssh-keys/oracle.key"
     NODE_USER="root"
     NODES=($SWARM_WORKER_VN_HOSTNAME)
+    MASTER_DATA_FOLDER="/mnt/docker/data"
     ;;
   gamma)
     SSH_KEY="$HOME/ssh-keys/oracle.key"
     NODE_USER="ubuntu"
     NODES=($SWARM_WORKER_SG_HOSTNAME)
+    MASTER_DATA_FOLDER="/data-drive/docker/data"
     ;;
   *)
     err "❌ Unknown SWARM_NODE_CODENAME: $SWARM_NODE_CODENAME"

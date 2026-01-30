@@ -1,0 +1,30 @@
+# PgDog users configuration
+
+[[users]]
+name = "postgres"
+database = "postgres"
+password = "${POSTGRES_PASSWORD}"
+pool_size = 50
+min_pool_size = 5
+
+[[users]]
+name = "replicator"
+database = "postgres"
+password = "${POSTGRES_PASSWORD}"
+pool_size = 10
+min_pool_size = 1
+
+[[users]]
+name = "postgres"
+database = "authentik_db"
+password = "${POSTGRES_PASSWORD}"
+pool_size = 50
+min_pool_size = 5
+
+[[users]]
+name = "replicator"
+database = "authentik_db"
+password = "${POSTGRES_PASSWORD}"
+pool_size = 10
+min_pool_size = 1
+
