@@ -1,0 +1,11 @@
+# Wazuh App Copyright (C) 2017, Wazuh Inc. (License GPLv2)
+services:
+  generator:
+    image: wazuh/wazuh-certs-generator:${CERT_GEN_IMAGE_TAG}
+    environment:
+      - CERT_TOOL_VERSION=${BASE_WAZUH_VERSION}
+      - HTTP_PROXY=${UI_URL}
+    volumes:
+      - ./config/wazuh_indexer_ssl_certs/:/certificates/
+      - ./config/certs.yml:/config/certs.yml
+      

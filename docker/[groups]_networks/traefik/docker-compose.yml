@@ -32,6 +32,16 @@ services:
       - target: 3000
         published: 3000
         mode: host
+      # Exposed ports for Wazuh SIEM
+      - target: 1514
+        published: 1514
+        mode: host
+      - target: 1515
+        published: 1515
+        mode: host
+      - target: 55000
+        published: 55000
+        mode: host
     deploy:
       mode: replicated
       replicas: 1
