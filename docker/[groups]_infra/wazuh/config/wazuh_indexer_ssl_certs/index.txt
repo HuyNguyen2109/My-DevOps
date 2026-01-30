@@ -1,1 +1,2 @@
 Folder for .pem and .key certificates of Wazuh
+Certificates are generated with command: ./deploy-wazuh.sh --gen-certs
