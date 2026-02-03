@@ -132,6 +132,9 @@ log "Creating Docker secrets..."
 docker secret rm postgres-root-password >/dev/null 2>&1 || true
 echo -n "$POSTGRES_PASSWORD" | docker secret create postgres-root-password - >/dev/null 2>&1 || true
 
+docker secret rm pgadmin-default-password >/dev/null 2>&1 || true
+echo -n "$POSTGRES_PASSWORD" | docker secret create pgadmin-default-password - >/dev/null 2>&1 || true
+
 # === Export environment variables ===
 export IMAGE_TAG="16.11"
 export PGBOUNCER_TAG="latest"
@@ -147,6 +150,50 @@ docker config rm $POSTGRES_HBA_FILE >/dev/null 2>&1 || true
 docker config rm $PGBOUNCER_TRANSACTION_INI >/dev/null 2>&1 || true
 docker config rm $PGBOUNCER_SESSION_INI >/dev/null 2>&1 || true
 docker config rm $PGBOUNCER_USERLIST >/dev/null 2>&1 || true
+docker config rm archive-wal-script >/dev/null 2>&1 || true
+
+# Create WAL archive script
+cat <<'EOF' | docker config create archive-wal-script - >/dev/null 2>&1 || true
+#!/bin/bash
+# WAL Archive Script - called by PostgreSQL archive_command
+# Usage: archive_wal.sh <source_path> <filename>
+
+WAL_SOURCE="$1"
+WAL_FILE="$2"
+ARCHIVE_DIR="/wal-archive"
+LOG_FILE="/var/lib/postgresql/data/archive.log"
+
+# Function to log with timestamp
+log_msg() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $*" >> "$LOG_FILE"
+}
+
+# Ensure archive directory exists and is writable
+if [ ! -d "$ARCHIVE_DIR" ]; then
+    log_msg "ERROR: Archive directory $ARCHIVE_DIR does not exist"
+    exit 1
+fi
+
+if [ ! -w "$ARCHIVE_DIR" ]; then
+    log_msg "ERROR: Archive directory $ARCHIVE_DIR is not writable ($(ls -ld $ARCHIVE_DIR))"
+    exit 1
+fi
+
+# Check if file already exists
+if [ -f "$ARCHIVE_DIR/$WAL_FILE" ]; then
+    log_msg "SKIP: $WAL_FILE already exists in archive"
+    exit 0
+fi
+
+# Copy the WAL file
+if cp "$WAL_SOURCE" "$ARCHIVE_DIR/$WAL_FILE"; then
+    log_msg "SUCCESS: Archived $WAL_FILE ($(du -h $ARCHIVE_DIR/$WAL_FILE | cut -f1))"
+    exit 0
+else
+    log_msg "FAILED: Could not copy $WAL_SOURCE to $ARCHIVE_DIR/$WAL_FILE (exit code: $?)"
+    exit 1
+fi
+EOF
 
 # PostgreSQL extended configuration
 cat <<EOF | docker config create $POSTGRES_EXTENDED_CONF - >/dev/null 2>&1 || true
@@ -177,7 +224,9 @@ wal_level = replica
 wal_buffers = -1
 
 archive_mode = on
-archive_command = 'test ! -f /wal-archive/%f && cp %p /wal-archive/%f || echo "ARCHIVE FAIL %p" >> /tmp/archive.log'
+archive_command = '/usr/local/bin/archive_wal.sh %p %f'
+archive_timeout = 300
+restore_command = 'cp /wal-archive/%f %p'
 
 max_wal_size = 8GB
 checkpoint_timeout = 10min

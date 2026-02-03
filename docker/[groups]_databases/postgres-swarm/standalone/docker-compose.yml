@@ -11,6 +11,9 @@ services:
         target: /etc/postgresql/conf.d/extended.conf
       - source: pg-hba-conf
         target: /etc/postgresql/pg_hba.conf
+      - source: archive-wal-script
+        target: /usr/local/bin/archive_wal.sh
+        mode: 0755
     networks:
       db-internetwork:
         aliases:
@@ -21,9 +24,9 @@ services:
         delay: 5s
         failure_action: rollback
       restart_policy:
-        condition: on-failure
+        condition: any
         delay: 30s
-        max_attempts: 3
+        max_attempts: 10
       resources:
         limits:
           cpus: "3"
@@ -43,10 +46,14 @@ services:
       - POSTGRES_DB=postgres
       - POSTGRES_HOST_AUTH_METHOD=md5
       - POSTGRES_INITDB_ARGS=--auth-host=md5 --auth-local=md5
-    command: >
-      sh -c "chown -R 999:999 /wal-archive && exec docker-entrypoint.sh postgres
-        -c config_file=/etc/postgresql/conf.d/extended.conf
-        -c hba_file=/etc/postgresql/pg_hba.conf"
+      - PGDATA=/var/lib/postgresql/data
+    command:
+      - sh
+      - -c
+      - |
+        chown -R 999:999 /wal-archive
+        chmod -R 755 /wal-archive
+        exec docker-entrypoint.sh postgres -c config_file=/etc/postgresql/conf.d/extended.conf -c hba_file=/etc/postgresql/pg_hba.conf
     healthcheck:
       test: ["CMD-SHELL", "ps aux | grep '[p]ostgres'"]
       interval: 30s
@@ -162,6 +169,8 @@ configs:
   postgres-extended-conf:
     external: true
   pg-hba-conf:
+    external: true
+  archive-wal-script:
     external: true
   pgbouncer-transaction-ini:
     external: true
