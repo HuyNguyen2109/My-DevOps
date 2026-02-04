@@ -6,21 +6,27 @@ warn() { printf '\033[1;33m[WARN]\033[0m %s\n' "$*"; }
 # ----------------------
 # Define stack name (change this as needed)
 STACK_NAME="authentik-prd"
-SWARM_NODE_CODENAME=""
+SERVER_SWARM_NODE_CODENAME=""
+WORKER_SWARM_NODE_CODENAME=""
 # === Check if codename has been passed as argument ===
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --node|--codename|-n)
-      SWARM_NODE_CODENAME="$2"
+    --server-node)
+      SERVER_SWARM_NODE_CODENAME="$2"
+      shift 2
+      ;;
+    --worker-node)
+      WORKER_SWARM_NODE_CODENAME="$2"
       shift 2
       ;;
     -h|--help)
-      log "Usage: $0 --node <SWARM_NODE_CODENAME>"
+      log "Usage: $0 --server-node <SERVER_SWARM_NODE_CODENAME> --worker-node <WORKER_SWARM_NODE_CODENAME>"
       log "Options:"
-      log "  --node, --codename, -n    Specify the node codename (alpha, beta, gamma)"
-      log "  -h, --help                Show this help message"
+      log "  --server-node    Specify the server node codename (alpha, beta, gamma)"
+      log "  --worker-node    Specify the worker node codename (alpha, beta, gamma)"
+      log "  -h, --help       Show this help message"
       log ""
-      log "Example: $0 --node alpha"
+      log "Example: $0 --server-node alpha --worker-node beta"
       exit 0
       ;;
     *)
@@ -31,10 +37,16 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [ -z "$SWARM_NODE_CODENAME" ]; then
-  err "❌ SWARM_NODE_CODENAME is required."
-  err "Usage: $0 --node <SWARM_NODE_CODENAME>"
+if [ -z "$SERVER_SWARM_NODE_CODENAME" ]; then
+  err "❌ SERVER_SWARM_NODE_CODENAME is required."
+  err "Usage: $0 --node <SERVER_SWARM_NODE_CODENAME>"
   err "Example: $0 --node alpha"
+  exit 1
+fi
+if [ -z "$WORKER_SWARM_NODE_CODENAME" ]; then
+  err "❌ WORKER_SWARM_NODE_CODENAME is required."
+  err "Usage: $0 --worker-node <WORKER_SWARM_NODE_CODENAME>"
+  err "Example: $0 --worker-node beta"
   exit 1
 fi
 # === Remove existing Docker services if it exists ===
@@ -88,7 +100,8 @@ export UI_URL="auth.mcb-svc.work"
 export AUTHENTIK_TAG="2025.12.0"
 # Set to 0 to release connections immediately back to pool (critical for session mode)
 export PG_CONN_MAX="0"
-export SWARM_NODE_CODENAME=$SWARM_NODE_CODENAME
+export SERVER_SWARM_NODE_CODENAME=$SERVER_SWARM_NODE_CODENAME
+export WORKER_SWARM_NODE_CODENAME=$WORKER_SWARM_NODE_CODENAME
 export AUTHENTIK_PUBLIC_URL="auth.mcb-svc.work"
 # Deploy the stack
 docker stack deploy -c docker-compose.yml "$STACK_NAME" --detach

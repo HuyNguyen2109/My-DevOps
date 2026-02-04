@@ -28,9 +28,6 @@ services:
       AUTHENTIK_POSTGRESQL__DISABLE_SERVER_SIDE_CURSORS: "true"
       # Tell Authentik it's behind PgBouncer to adjust connection behavior
       AUTHENTIK_POSTGRESQL__USE_PGBOUNCER: "true"
-    volumes:
-      - authentik-server-media:/media
-      - authentik-server-templates:/templates
     deploy:
       update_config:
         parallelism: 1
@@ -42,8 +39,7 @@ services:
       placement:
         constraints:
           - node.platform.os == linux
-          - node.role == worker
-          - node.labels.codename == ${SWARM_NODE_CODENAME}
+          - node.labels.codename == ${SERVER_SWARM_NODE_CODENAME}
     networks:
       traefik-internetwork: 
         aliases:
@@ -73,9 +69,7 @@ services:
     user: root
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - authentik-worker-media:/media
       - authentik-worker-certs:/certs
-      - authentik-worker-templates:/templates
     networks:
       db-internetwork: {}
       traefik-internetwork:
@@ -92,8 +86,7 @@ services:
       placement:
         constraints:
           - node.platform.os == linux
-          - node.role == worker
-          - node.labels.codename != ${SWARM_NODE_CODENAME}
+          - node.labels.codename == ${WORKER_SWARM_NODE_CODENAME}
 
   db_backup:
     image: eeshugerman/postgres-backup-s3:16
@@ -129,13 +122,5 @@ networks:
     external: true
 
 volumes:
-  authentik-server-media:
-    driver: local
-  authentik-server-templates:
-    driver: local
-  authentik-worker-media:
-    driver: local
   authentik-worker-certs:
-    driver: local
-  authentik-worker-templates:
     driver: local
