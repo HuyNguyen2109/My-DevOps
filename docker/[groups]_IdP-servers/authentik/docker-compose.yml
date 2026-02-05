@@ -76,17 +76,25 @@ services:
         aliases:
           - authentik-worker
     deploy:
+      mode: global
       update_config:
         parallelism: 1
         delay: 5s
         failure_action: rollback
-      replicas: 1
       restart_policy:
         condition: any
       placement:
         constraints:
           - node.platform.os == linux
-          - node.labels.codename == ${WORKER_SWARM_NODE_CODENAME}
+        # Docker Swarm does not support constraints directly on RAM/CPU.
+        # Use 'resources' to set reservations/limits instead:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
 
   db_backup:
     image: eeshugerman/postgres-backup-s3:16
