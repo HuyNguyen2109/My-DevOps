@@ -83,6 +83,7 @@ services:
       - --config.file=/etc/alertmanager/alertmanager.yml
       - --storage.path=/alertmanager
       - --web.external-url=http://100.88.153.244:9093
+      - --cluster.listen-address= (single instance; avoids dispatcher leadership wait)
     ports:
       - "100.88.153.244:9093:9093"
     volumes:
