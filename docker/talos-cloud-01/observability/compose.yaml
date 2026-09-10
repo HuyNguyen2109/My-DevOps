@@ -75,6 +75,23 @@ services:
     command:
       - --path.rootfs=/rootfs
 
+  alertmanager:
+    image: prom/alertmanager:v0.32.0
+    container_name: obs-alertmanager
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --web.external-url=http://100.88.153.244:9093
+    ports:
+      - "100.88.153.244:9093:9093"
+    volumes:
+      - ./config/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./config/telegram.tmpl:/etc/alertmanager/telegram.tmpl:ro
+      - ./telegram_token:/etc/alertmanager/telegram_token:ro
+      - /docker-volume/observability/alertmanager:/alertmanager
+    networks: [obs-net]
+
 networks:
   obs-net:
     driver: bridge

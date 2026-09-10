@@ -25,12 +25,16 @@ printf 'AWS_ENDPOINTS=%s\nAWS_ACCESS_KEY_ID=%s\nAWS_SECRET_ACCESS_KEY=%s\nGRAFAN
   "$S3_HOST" "$S3_ACCESS" "$S3_SECRET" "$GF_PASS" > "${DIR}/.env"
 chmod 600 "${DIR}/.env"
 
+echo "== writing telegram bot token (alertmanager) =="
+vault kv get -field=common-telegram-bot-token kubernetes/docker-secrets > "${DIR}/telegram_token"
+chmod 600 "${DIR}/telegram_token"
+
 echo "== preparing remote dirs =="
-ssh -i "$SSH_KEY" "$TARGET" "sudo mkdir -p ${REMOTE_DIR}/{loki,prometheus,grafana} && sudo chown -R \$(id -u):\$(id -g) ${REMOTE_DIR}"
+ssh -i "$SSH_KEY" "$TARGET" "sudo mkdir -p ${REMOTE_DIR}/{loki,prometheus,grafana,alertmanager} && sudo chown -R \$(id -u):\$(id -g) ${REMOTE_DIR}"
 
 echo "== uploading stack =="
-scp -i "$SSH_KEY" -r "${DIR}/compose.yaml" "${DIR}/config" "${DIR}/.env" "$TARGET":/tmp/obs/
-ssh -i "$SSH_KEY" "$TARGET" "sudo cp -r /tmp/obs/* ${REMOTE_DIR}/"
+scp -i "$SSH_KEY" -r "${DIR}/compose.yaml" "${DIR}/config" "${DIR}/.env" "${DIR}/telegram_token" "$TARGET":/tmp/obs/
+ssh -i "$SSH_KEY" "$TARGET" "sudo cp -r /tmp/obs/* ${REMOTE_DIR}/ && sudo chmod 600 ${REMOTE_DIR}/telegram_token"
 
 echo "== starting stack =="
 ssh -i "$SSH_KEY" "$TARGET" "cd ${REMOTE_DIR} && sudo docker compose up -d"
