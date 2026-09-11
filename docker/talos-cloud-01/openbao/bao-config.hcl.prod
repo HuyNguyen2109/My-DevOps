@@ -1,6 +1,6 @@
 ui = true
 storage "postgresql" {
-  connection_url = "postgres://USER:PASS@10.99.0.1:5432/vault-data?sslmode=disable"
+  connection_url = "postgres://USER:PASS@172.18.0.1:5432/vault-data?sslmode=disable"
   table           = "vault_kv_store"
   ha_table        = "vault_ha_locks"
 }

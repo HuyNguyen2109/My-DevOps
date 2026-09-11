@@ -39,8 +39,8 @@ fi
 [ "$MODE" = "stage" ] && [ "$TARGET_URL" = "$PG_LIVE" ] && { echo "ERROR: stage TARGET_URL == PG_LIVE (no DB swap!)" >&2; exit 1; }
 
 sed \
-  -e "s|postgres://USER:PASS@10.99.0.1:5432/vault-data-stage|$(esc "$TARGET_URL")|g" \
-  -e "s|postgres://USER:PASS@10.99.0.1:5432/vault-data|$(esc "$TARGET_URL")|g" \
+  -e "s|postgres://USER:PASS@172.18.0.1:5432/vault-data-stage|$(esc "$TARGET_URL")|g" \
+  -e "s|postgres://USER:PASS@172.18.0.1:5432/vault-data|$(esc "$TARGET_URL")|g" \
   -e "s|AZURE_TENANT_ID|$(esc "$AZURE_TENANT_ID")|g" \
   -e "s|AZURE_CLIENT_ID|$(esc "$AZURE_CLIENT_ID")|g" \
   -e "s|AZURE_CLIENT_SECRET|$(esc "$AZURE_CLIENT_SECRET")|g" \
