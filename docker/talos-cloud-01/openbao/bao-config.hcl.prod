@@ -1,0 +1,23 @@
+ui = true
+storage "postgresql" {
+  connection_url = "postgres://USER:PASS@10.99.0.1:5432/vault-data?sslmode=disable"
+  table           = "vault_kv_store"
+  ha_table        = "vault_ha_locks"
+}
+listener "tcp" {
+  address = "0.0.0.0:8200"
+  tls_disable = 1
+}
+seal "azurekeyvault" {
+  tenant_id     = "AZURE_TENANT_ID"
+  client_id     = "AZURE_CLIENT_ID"
+  client_secret = "AZURE_CLIENT_SECRET"
+  vault_name    = "AZURE_VAULT_NAME"
+  key_name      = "unseal-key-hcl"
+  disabled = "true"
+}
+seal "ocikms" {
+  key_id              = "KEY_ID_OCID"
+  crypto_endpoint     = "CRYPTO_ENDPOINT"
+  management_endpoint = "MANAGEMENT_ENDPOINT"
+}

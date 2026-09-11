@@ -1,0 +1,13 @@
+services:
+  openbao:
+    image: ghcr.io/openbao/openbao:2.6.2
+    container_name: openbao
+    hostname: openbao
+    cap_add: [IPC_LOCK]
+    networks: [proxy]
+    volumes:
+      - ./bao-config.hcl:/etc/bao/bao-config.hcl:ro
+    command: ["server", "-config=/etc/bao/bao-config.hcl"]
+networks:
+  proxy:
+    external: true
