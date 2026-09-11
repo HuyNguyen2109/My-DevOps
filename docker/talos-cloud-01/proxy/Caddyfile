@@ -1,0 +1,3 @@
+vault.mcb-homelab.com {
+	reverse_proxy openbao:8200
+}
