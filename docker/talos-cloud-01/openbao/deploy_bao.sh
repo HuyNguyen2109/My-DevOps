@@ -2,7 +2,7 @@
 # Deploys the OpenBao project to talos-cloud-01.
 # Usage: deploy_bao.sh <stage|prod>
 #   stage - azure seal only, storage = vault-data-stage (copy of live DB)
-#   prod  - azure seal disabled + ocikms seal, storage = vault-data (live DB)
+#   prod  - azure seal only (recovery keys lost -> OCI KMS deferred), storage = vault-data (live DB)
 # Renders bao-config.hcl from the templates with credentials fetched at runtime
 # from the unRAID tower (.env of the old hashicorp-vault Arcane project).
 # NEVER commit bao-config.hcl or any *.env (see .gitignore).
@@ -31,7 +31,8 @@ if [ "$MODE" = "stage" ]; then
   KEY_ID=""; CRYPTO_ENDPOINT=""; MANAGEMENT_ENDPOINT=""
 else
   SOURCE=bao-config.hcl.prod; TARGET_URL="$PG_LIVE"
-  . /tmp/openbao-oci.env
+  # 2026-09-10: ocikms deferred (recovery keys lost); prod keeps the azure seal only
+  KEY_ID=""; CRYPTO_ENDPOINT=""; MANAGEMENT_ENDPOINT=""
 fi
 
 # Guard: the stage DB differs from the live DB only in the suffix swap

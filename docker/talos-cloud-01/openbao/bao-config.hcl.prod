@@ -8,16 +8,11 @@ listener "tcp" {
   address = "0.0.0.0:8200"
   tls_disable = 1
 }
+# 2026-09-10: seal stays Azure Key Vault (recovery keys lost; OCI KMS deferred)
 seal "azurekeyvault" {
   tenant_id     = "AZURE_TENANT_ID"
   client_id     = "AZURE_CLIENT_ID"
   client_secret = "AZURE_CLIENT_SECRET"
   vault_name    = "AZURE_VAULT_NAME"
   key_name      = "unseal-key-hcl"
-  disabled = "true"
-}
-seal "ocikms" {
-  key_id              = "KEY_ID_OCID"
-  crypto_endpoint     = "CRYPTO_ENDPOINT"
-  management_endpoint = "MANAGEMENT_ENDPOINT"
 }
