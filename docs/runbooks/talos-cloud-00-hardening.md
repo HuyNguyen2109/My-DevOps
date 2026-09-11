@@ -24,3 +24,10 @@ Recommend: OCI dashboards/usage alerts via the central observability stack
 - Boot-volume backup: `talos-cloud-01-pre-reboot-20260911-0848`.
 - AZURE: rotate `client_secret` (hashicorp-unseal-vault app) - value was exposed in a chat transcript.
 - TODO: restore original caddy Caddyfile (talos-cloud-00, routes incl. relay/signal) -> netbird mesh -> observability bind 100.88.153.244; then wg0/provider UDP fix to drop the tunnel.
+
+## 2026-09-11 Docker data move: NFS -> /mnt/docker-data (talos-cloud-00)
+- Copied (copy-only, sources NOT deleted): jenkins/ (115M home+cacerts), rustdesk/ (240K), zitadel/ (bootstrap), arcane/{projects,templates}
+- Updated `.env.global` MASTER_DIR=/mnt/docker-data (this single var feeds every project's volume paths)
+- arcane-agent recreated with local mounts: /mnt/docker-data/arcane/{projects,templates}
+- Remaining: redeploy projects in Arcane dashboard (Jenkins, RustDesk, Zitadel, Netbird, alloy-talosc00) to switch running containers to local paths
+- Rollback: revert MASTER_DIR + agent mounts to /mnt/nfs-server.d/docker-share (NFS originals untouched)
