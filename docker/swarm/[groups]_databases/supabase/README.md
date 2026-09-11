@@ -30,7 +30,7 @@ Before deploying, ensure you have:
 - ✅ Node labeled with `node.labels.database=master`
 - ✅ Vault CLI installed and configured
 - ✅ Environment variables set:
-  - `VAULT_ADDR=https://vault.mcb-svc.work`
+  - `VAULT_ADDR=https://vault.mcb-homelab.com`
   - `VAULT_TOKEN=<your-vault-token>`
 
 ## Required Secrets in Vault

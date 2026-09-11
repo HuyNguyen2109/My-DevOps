@@ -11,6 +11,7 @@ Operational runbooks for diagnosing and fixing common homelab issues. Created 20
 | [longhorn-maintenance.md](longhorn-maintenance.md) | Longhorn orphan cleanup, DiskPressure / Unschedulable node recovery, orphaned PVCs |
 | [patroni-postgres-pgbouncer.md](patroni-postgres-pgbouncer.md) | Patroni timeline mismatch, reinitialize, PostgreSQL 18 config, PgBouncer, vault-agent |
 | [disk-management.md](disk-management.md) | LVM extension (Proxmox VM resize), log cleanup, journal tuning |
+| [vault-openbao-migration.md](vault-openbao-migration.md) | Vault → OpenBao migration (talos-cloud-01), azure seal retained (recovery keys lost), cutover + rollback |
 
 ## Quick Reference
 
@@ -23,6 +24,8 @@ ssh -i $HOME/ssh-keys/homelab-linux ubuntu@192.168.1.11  # talos-00
 ssh -i $HOME/ssh-keys/homelab-linux ubuntu@192.168.1.12  # talos-01
 ssh -i $HOME/ssh-keys/homelab-linux ubuntu@192.168.1.13  # talos-02
 ssh -i $HOME/ssh-keys/homelab-linux root@192.168.1.7     # vault-agent
+ssh -i $HOME/ssh-keys/oracle opc@140.245.100.82          # talos-cloud-01 (OpenBao + Caddy)
+ssh -i $HOME/ssh-keys/oracle root@14.225.220.145         # talos-cloud-00 (Postgres/PgBouncer)
 ```
 
 ### kubectl on Nodes

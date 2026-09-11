@@ -20,7 +20,7 @@ terraform {
 # === PROVIDERS ===
 
 provider "vault" {
-  address         = "https://vault.mcb-svc.work"
+  address         = "https://vault.mcb-homelab.com"
 }
 
 provider "proxmox" {

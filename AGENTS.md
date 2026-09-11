@@ -58,12 +58,15 @@ This is a **personal homelab DevOps monorepo** containing:
   must land on `develop`. ArgoCD apps reference `targetRevision: develop`.
 
 ### Secrets Architecture
-- All secrets flow through **HashiCorp Vault**.
+- All secrets flow through **OpenBao** (Vault-compatible; migrated from the unRAID
+  HashiCorp Vault on 2026-09-10). Seal is **Azure Key Vault** (`azurekeyvault`,
+  retained — recovery keys lost, OCI KMS deferred); the old unRAID Vault is frozen
+  (stopped, intact rollback twin).
 - **Kubernetes**: External Secrets Operator (ESO) via `ClusterSecretStore`
   named `vault-backend` pointing to `vault.mcb-homelab.com` (KV v2, prefix `kubernetes/`).
   ESO auth: Kubernetes auth mount at `kubernetes`, role `eso-role`, SA `vault-auth`
   in `kube-system`.
-- **Terraform**: Reads credentials via the `vault` provider at `vault.mcb-svc.work`,
+- **Terraform**: Reads credentials via the `vault` provider at `https://vault.mcb-homelab.com`,
   path `kubernetes/terraform`.
 - New app secrets: create an `ExternalSecret` referencing `vault-backend` in the
   app's `manifests/` folder.

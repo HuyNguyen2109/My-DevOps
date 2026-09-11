@@ -61,7 +61,7 @@ urlencode() {
 }
 
 # === Fetch secrets from Vault and export as environment variables ===
-log "🔐 Fetching secrets from Vault (https://vault.mcb-svc.work/ui/vault/secrets/kubernetes/kv/docker-secrets/)..."
+log "🔐 Fetching secrets from Vault (https://vault.mcb-homelab.com/ui/vault/secrets/kubernetes/kv/docker-secrets/)..."
 
 # Postgres password
 export SUPABASE_POSTGRES_PASSWORD=$(vault kv get -field=supabase-postgres-password kubernetes/docker-secrets 2>/dev/null)

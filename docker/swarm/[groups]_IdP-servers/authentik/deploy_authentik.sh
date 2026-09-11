@@ -75,7 +75,7 @@ export VAULT_CLIENT_TIMEOUT=30s
 export VAULT_MAX_RETRIES=3
 if ! timeout 30 vault status >/dev/null 2>&1; then
     err "❌ Cannot connect to Vault at $VAULT_ADDR (timeout after 30s)"
-    err "Vault resolves to: $(host vault.mcb-svc.work 2>/dev/null | grep 'has address' || echo 'DNS lookup failed')"
+    err "Vault resolves to: $(host vault.mcb-homelab.com 2>/dev/null | grep 'has address' || echo 'DNS lookup failed')"
     err "This machine may not have network access to Vault on port 443"
     err "Possible solutions: 1) Check firewall rules 2) Use VPN/SSH tunnel 3) Run from authorized network"
     exit 1
