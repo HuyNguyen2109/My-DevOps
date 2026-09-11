@@ -31,3 +31,10 @@ Recommend: OCI dashboards/usage alerts via the central observability stack
 - arcane-agent recreated with local mounts: /mnt/docker-data/arcane/{projects,templates}
 - Remaining: redeploy projects in Arcane dashboard (Jenkins, RustDesk, Zitadel, Netbird, alloy-talosc00) to switch running containers to local paths
 - Rollback: revert MASTER_DIR + agent mounts to /mnt/nfs-server.d/docker-share (NFS originals untouched)
+
+## 2026-09-11 (II) NFS -> /mnt/docker-data EXECUTED (post NFS-remount)
+- Full mirror of /mnt/nfs-server.d/docker-share -> /mnt/docker-data (arcane, caddy, jenkins, rustdesk, zitadel; #recycle excluded). NFS originals UNTOUCHED (rollback available).
+- All local project compose.yaml + per-project .env prefix-swapped: /mnt/nfs-server.d/docker-share -> /mnt/docker-data. Per-project MASTER_DIR: Jenkins=/mnt/docker-data/jenkins, Zitadel=/mnt/docker-data/zitadel, rustdesk=/mnt/docker-data, caddy=/mnt/docker-data/caddy; global .env.global MASTER_DIR=/mnt/docker-data.
+- arcane-agent recreated earlier on local projects/templates. Containers recreated from local composes: jenkins(+init), zitadel-api/login (healthy), rustdesk-hbbs/hbbr, netbird-management+coturn, alloy. Mounts verified local.
+- NOTE: Arcane MANAGER-side per-project env may still hold NFS MASTER_DIR -> confirm/sync in dashboard before next Redeploy.
+- Known residual: alloy -> central Loki push failing (mesh/100.88.153.244 flakiness, not the move); jenkins :8080 answered 407 (proxy-server?) - revisit.
