@@ -192,3 +192,34 @@ The old Vault remains unsealable via Azure Key Vault for as long as AKV exists
 - G5 (user): `az login`; `az keyvault list`; `az keyvault delete` + `az keyvault purge`.
 - Old unRAID Vault is then permanently sealed (frozen backup); removing the container
   is a user decision.
+
+---
+
+## 9. Deviation Log — 2026-09-10: Azure seal retained, OCI KMS deferred
+
+**Context:** the recovery key shares for the old unRAID Vault were lost, so the
+seal-migration step (G3, `bao operator unseal -migrate` with 3 shares) cannot be
+performed — there is no way to re-wrap the master key to a new seal.
+
+**Approved decision:** OpenBao stays sealed by **Azure Key Vault** — the same seal
+as the old Vault (`seal "azurekeyvault"`, key `unseal-key-hcl`). The
+`disabled = "true"` flag and the entire `ocikms` block were removed from
+`bao-config.hcl.prod`; no seal migration runs and **no recovery shares are needed**
+(AKV auto-unseals OpenBao on every start/restart).
+
+**Consequences / deferred work:**
+- G3 (`bao operator unseal -migrate`): **not performed** — deferred indefinitely.
+- OCI KMS resources from Task 1 (`homelab-kms` vault, `openbao-seal` AES key,
+  dynamic group `talos-cloud-01-openbao`, policy `openbao-kms-policy`) are left in
+  place for a future seal migration should the recovery keys ever be found.
+- **G5/AKV purge is CANCELLED — Azure Key Vault must NOT be deleted or purged.**
+  AKV is now part of OpenBao's production seal (and of the rollback twin's seal).
+- The old unRAID Vault (`hashicorp-vault`, stopped, container + storage intact)
+  remains a **fully functional rollback twin**: `docker start hashicorp-vault`
+  is a viable rollback while AKV keeps the master key.
+- Sections 4 (G3) and 8 (soak → OCI KMS → AKV purge) are **superseded** by this
+  deviation; section 5 verification still applies but reports
+  `Seal Type azurekeyvault` instead of `ociKms`.
+- The OCI KMS activation path remains valid future work: if the recovery keys are
+  found, re-add the seal stanza (Task 1 outputs: `/tmp/openbao-oci.env` on the
+  controller, or the OCI console) and run the seal migration then.
