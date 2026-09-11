@@ -60,8 +60,11 @@ This is a **personal homelab DevOps monorepo** containing:
 ### Secrets Architecture
 - All secrets flow through **OpenBao** (Vault-compatible; migrated from the unRAID
   HashiCorp Vault on 2026-09-10). Seal is **Azure Key Vault** (`azurekeyvault`,
-  retained — recovery keys lost, OCI KMS deferred); the old unRAID Vault is frozen
-  (stopped, intact rollback twin).
+  retained — recovery keys lost, OCI KMS deferred); the old unRAID Vault
+  container was removed 2026-09-11 — redeployable anytime from the Arcane
+  `Hashicorp-Vault` project (data + Azure seal intact), otherwise immutable.
+- Endpoint: `https://vault.mcb-homelab.com` (OpenBao 2.6.2 on talos-cloud-01,
+  caddy-froned, Cloudflare); local scripts use `VAULT_ADDR`/`BAO_ADDR` accordingly.
 - **Kubernetes**: External Secrets Operator (ESO) via `ClusterSecretStore`
   named `vault-backend` pointing to `vault.mcb-homelab.com` (KV v2, prefix `kubernetes/`).
   ESO auth: Kubernetes auth mount at `kubernetes`, role `eso-role`, SA `vault-auth`
@@ -163,6 +166,7 @@ Bi-weekly UPS deep battery exercise simulation via **NUT (Network UPS Tools)**.
 | talos-02        | Bare-metal (CP)    | ubuntu  | SSH key @ `$HOME/ssh-keys/homelab-linux` | Kubernetes node                 |
 | tower.local     | unRAID server      | root    | SSH key @ `$HOME/ssh-keys/homelab-linux` | Storage/NAS                     |
 | talos-cloud-00  | Cloud VM           | root    | SSH key @ `$HOME/ssh-keys/oracle`        | Cloud node                      |
+| talos-cloud-01  | Cloud VM           | opc     | SSH key @ `$HOME/ssh-keys/oracle`        | Cloud node (140.245.100.82), IPv6 disabled |
 | vault-agent     | VM                 | root    | SSH key @ `$HOME/ssh-keys/homelab-linux` | LXC Container                   |
 
 ---
