@@ -74,13 +74,19 @@ BAO_ADDR=https://vault.mcb-homelab.com bao status | grep -E "Seal Type|Sealed|In
 > **Operator notes (learned during stage):**
 > 1. After a prod deploy, re-upload the rendered `bao-config.hcl` to the Arcane
 >    workspace of project `openbao` (PUT `/environments/<env>/projects/<id>/workspace`,
->    `fileChanges: [{"operation":"create_file","relativePath":"bao-config.hcl","uploadIndex":0}]`
+>    `fileChanges: [{"operation":"update_file","relativePath":"bao-config.hcl","uploadIndex":0}]`
 >    + the file part), otherwise a future dashboard redeploy would start OpenBao from the
 >    stale stage config. `compose.yaml` must NOT be sent through the workspace (protected;
->    it lives in the project's `composeContent`).
-> 2. `chmod 600 /docker-volume/arcane/projects/OpenBao/bao-config.hcl` after deploy —
->    Arcane writes workspace files as 0644 and the file contains PG + Azure credentials.
-> 3. OpenBao auto-creates a `control-group` policy on first start (built-in CE behavior)
+>    it lives in the project's `composeContent`). The agent needs write access to the file
+>    to apply the update — chmod 666 before the PUT and restore 600 afterwards.
+> 2. `deploy_bao.sh` sets `bao-config.hcl` to owner `100:1000` (the container's `openbao`
+>    user) mode 600; Arcane's own workspace writes create 0644 files owned by the agent
+>    (65532) — the container user (uid 100) can read those, but keep owner 100:1000 for
+>    consistency. The config contains PG + Azure credentials — never leave it world-readable.
+> 3. The live PG tables must be owned by `vault-admin` (the user in the connection URL);
+>    if they were created by `postgres`, run `ALTER TABLE vault_kv_store OWNER TO vault-admin;`
+>    (and `vault_ha_locks`) or OpenBao fails with `must be owner of table vault_kv_store`.
+> 4. OpenBao auto-creates a `control-group` policy on first start (built-in CE behavior)
 >    and may log a transient `agent-registry` mount error; both are cosmetic — mounts,
 >    auth, secret values and policy contents match the old Vault.
 
