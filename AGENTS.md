@@ -59,10 +59,10 @@ This is a **personal homelab DevOps monorepo** containing:
 
 ### Secrets Architecture
 - All secrets flow through **OpenBao** (Vault-compatible; migrated from the unRAID
-  HashiCorp Vault on 2026-09-10). Seal is **Azure Key Vault** (`azurekeyvault`,
-  retained — recovery keys lost, OCI KMS deferred); the old unRAID Vault
-  container was removed 2026-09-11 — redeployable anytime from the Arcane
-  `Hashicorp-Vault` project (data + Azure seal intact), otherwise immutable.
+  HashiCorp Vault on 2026-09-10). Seal is **OCI KMS** (`ocikms`, instance-principal,
+  `homelab-kms` vault / `openbao-seal` key) since 2026-09-12 (rebuild migration;
+  new recovery keys stored on talos-cloud-01). The previous Azure-sealed instance
+  is stopped on talos-cloud-01 as rollback twin; AKV retained for that twin only.
 - Endpoint: `https://vault.mcb-homelab.com` (OpenBao 2.6.2 on talos-cloud-01,
   caddy-froned, Cloudflare); local scripts use `VAULT_ADDR`/`BAO_ADDR` accordingly.
 - **Kubernetes**: External Secrets Operator (ESO) via `ClusterSecretStore`
