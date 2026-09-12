@@ -10,6 +10,7 @@ Operational runbooks for diagnosing and fixing common homelab issues. Created 20
 | [network-bonding-wol.md](network-bonding-wol.md) | NIC bonding (active-backup), fail_over_mac modes, Wake-on-LAN, ASUS router ARP binding |
 | [longhorn-maintenance.md](longhorn-maintenance.md) | Longhorn orphan cleanup, DiskPressure / Unschedulable node recovery, orphaned PVCs |
 | [patroni-postgres-pgbouncer.md](patroni-postgres-pgbouncer.md) | Patroni timeline mismatch, reinitialize, PostgreSQL 18 config, PgBouncer, vault-agent |
+| [vault-to-openbao-oci-migration.md](vault-to-openbao-oci-migration.md) | Vault→OpenBao + Azure→OCI KMS seal migration, incident record, operations |
 | [disk-management.md](disk-management.md) | LVM extension (Proxmox VM resize), log cleanup, journal tuning |
 | [vault-openbao-migration.md](vault-openbao-migration.md) | Vault → OpenBao migration (talos-cloud-01), azure seal retained (recovery keys lost), cutover + rollback |
 
@@ -19,7 +20,7 @@ Operational runbooks for diagnosing and fixing common homelab issues. Created 20
 
 ```bash
 sshpass -p "$(cat $HOME/ssh-keys/.unraid-password.txt)" ssh root@192.168.1.40   # tower.local
-ssh -i $HOME/ssh-keys/homelab-linux root@192.168.1.10    # proxmox-00
+ssh -i $HOME/ssh-keys/homelab-linux root@192.168.1.9    # proxmox-00
 ssh -i $HOME/ssh-keys/homelab-linux ubuntu@192.168.1.11  # talos-00
 ssh -i $HOME/ssh-keys/homelab-linux ubuntu@192.168.1.12  # talos-01
 ssh -i $HOME/ssh-keys/homelab-linux ubuntu@192.168.1.13  # talos-02
