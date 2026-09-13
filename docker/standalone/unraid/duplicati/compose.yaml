@@ -1,0 +1,19 @@
+services:
+  duplicati:
+    image: lscr.io/linuxserver/duplicati:latest
+    container_name: duplicati
+    env_file:
+      - .env
+    ports:
+      - "8200:8200"
+    volumes:
+      - /mnt/user/backups/Duplicati:/backup
+      - /mnt:/source
+      - /mnt/user/appdata/duplicati:/config
+    labels:
+      net.unraid.docker.icon: "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/duplicati-logo.png"
+      net.unraid.docker.managed: "dockerman"
+    restart: unless-stopped
+    cpus: 1.5
+    mem_limit: 2G
+    mem_reservation: 2G

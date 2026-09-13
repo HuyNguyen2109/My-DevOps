@@ -1,0 +1,51 @@
+services:
+  # Init container: prepares truststore with custom CA certificates
+  cert-init:
+    image: jenkins/jenkins:lts-jdk21
+    container_name: jenkins-init-cert
+    user: root
+    networks:
+      proxy: {}
+    volumes:
+      - ${MASTER_DIR}/custom-certs:/certs:ro
+      - ${MASTER_DIR}/cacerts:/cacerts-volume
+    command: >
+      bash -c '
+        cp "$${JAVA_HOME}/lib/security/cacerts" /cacerts-volume/cacerts &&
+        for cert in /certs/*.crt /certs/*.pem; do
+          [ -f "$$cert" ] || continue;
+          alias="custom-$$(basename "$${cert%.*}")";
+          "$${JAVA_HOME}/bin/keytool" -importcert -noprompt \
+            -keystore /cacerts-volume/cacerts \
+            -storepass ${TRUSTSTORE_PASSWD} \
+            -alias "$$alias" \
+            -file "$$cert" || true;
+        done &&
+        echo "Custom CA certificates imported successfully"
+      '
+
+  # Main Jenkins container
+  jenkins:
+    image: jenkins/jenkins:lts-jdk21
+    container_name: jenkins
+    user: root
+    depends_on:
+      cert-init:
+        condition: service_completed_successfully
+    networks:
+      proxy: {}
+    ports:
+      - "50000:50000"
+    volumes:
+      - ${MASTER_DIR}/home:/var/jenkins_home
+      - ${MASTER_DIR}/cacerts:/cacerts:ro
+    environment:
+      JAVA_OPTS: "-Djavax.net.ssl.trustStore=/cacerts/cacerts -Djavax.net.ssl.trustStorePassword=${TRUSTSTORE_PASSWD}"
+    mem_limit: 2G
+    mem_reservation: 2G
+    cpus: 0.5
+    restart: always
+      
+networks:
+  proxy:
+    external: true

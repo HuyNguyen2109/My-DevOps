@@ -1,0 +1,82 @@
+x-default: &default
+  restart: 'unless-stopped'
+  env_file:
+    - .env
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
+x-proxy-service: &proxy-service
+  <<: *default
+  networks:
+    - proxy
+
+services:
+  # UI dashboard
+  dashboard:
+    <<: *proxy-service
+    image: netbirdio/dashboard:latest
+    container_name: netbird-dashboard
+
+  # Signal
+  signal:
+    <<: *proxy-service
+    image: netbirdio/signal:latest
+    container_name: netbird-signal-server
+    depends_on:
+      - dashboard
+    volumes:
+      - netbird-signal:/var/lib/netbird
+    command: [
+      "--cert-file", "",
+      "--cert-key", "",
+      "--log-file", "console",
+      "--port", "80"
+    ]
+
+  # Relay
+  relay:
+    <<: *proxy-service
+    image: netbirdio/relay:latest
+    container_name: netbird-relay-server
+
+  # Management
+  management:
+    <<: *proxy-service
+    image: netbirdio/management:latest
+    container_name: netbird-management-server
+    depends_on:
+      - dashboard
+    volumes:
+      - netbird-mgmt:/var/lib/netbird
+      - ./management.json:/etc/netbird/management.json
+    command: [
+      "--port", "80",
+      "--log-file", "console",
+      "--log-level", "info",
+      "--disable-anonymous-metrics=false",
+      "--single-account-mode-domain=netbird.mcb-homelab.com",
+      "--dns-domain=netbird.selfhosted",
+      "--disable-single-account-mode"
+    ]
+
+  # Coturn
+  coturn:
+    <<: *default
+    image: coturn/coturn:latest
+    container_name: netbird-coturn-server
+    volumes:
+      - ./turnserver.conf:/etc/turnserver.conf:ro
+    network_mode: host
+    command:
+      - -c /etc/turnserver.conf
+
+networks:
+  proxy:
+    external: true
+
+volumes:
+  netbird-mgmt:
+  netbird-signal:

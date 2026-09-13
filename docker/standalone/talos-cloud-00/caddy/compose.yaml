@@ -1,0 +1,26 @@
+services:
+  caddy:
+    image: ghcr.io/caddybuilds/caddy-cloudflare:latest
+    container_name: caddy-proxy
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      proxy: {}
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ${MASTER_DIR}/site:/srv
+      - ${MASTER_DIR}/data:/data
+      - ${MASTER_DIR}/config:/config
+    mem_limit: 256mb
+    mem_reservation: 128mb
+      
+networks:
+  proxy:
+    external: true

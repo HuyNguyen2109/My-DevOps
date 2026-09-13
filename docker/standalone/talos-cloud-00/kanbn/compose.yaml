@@ -1,0 +1,30 @@
+services:
+  migrate:
+    image: ghcr.io/kanbn/kan-migrate:latest
+    container_name: kan-migrate
+    env_file:
+      - .env
+    networks:
+      proxy:
+      db-intranet:
+    restart: "no"
+
+  web:
+    image: ghcr.io/kanbn/kan:latest
+    container_name: kan-web
+    hostname: kanbn
+    networks:
+      proxy:
+      db-intranet:
+    env_file:
+      - .env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    
+networks:
+  proxy:
+    external: true
+  db-intranet:
+    external: true

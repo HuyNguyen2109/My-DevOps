@@ -1,0 +1,21 @@
+services:
+  pgbouncer:
+    image: edoburu/pgbouncer:${PGBOUNCER_IMAGE_TAG:-latest}
+    container_name: pgbouncer
+    hostname: pgbouncer
+    env_file:
+      - .env
+    ports:
+      - "10.99.0.1:5432:5432"
+    volumes:
+      - ${MASTER_DIR}/pgbouncer:/etc/pgbouncer
+    restart: unless-stopped
+    networks:
+      db-intranet: {}
+    mem_limit: 256M
+    mem_reservation: 256m
+    cpus: 1
+    
+networks:
+  db-intranet:
+    external: true

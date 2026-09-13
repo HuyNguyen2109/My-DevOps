@@ -1,0 +1,58 @@
+services:
+  postgres:
+    image: pgvector/pgvector:${POSTGRES18_IMAGE_TAG}
+    container_name: postgres18
+    user: 0:0
+    hostname: postgres
+    restart: always
+    shm_size: 1gb
+    env_file:
+      - .env
+    networks:
+      db-intranet: {}
+    mem_limit: 1G
+    mem_reservation: 1G
+    cpus: 2
+    volumes:
+      - ${MASTER_DIR}/postgres-data:/var/lib/postgresql
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+  pgadmin4:
+    image: dpage/pgadmin4:${PGADMIN_IMAGE_TAG:-9.16}
+    container_name: pgadmin4
+    hostname: pgadmin
+    env_file:
+      - .env
+    ports:
+      - "100.88.0.70:3000:80"
+    volumes:
+      - ${MASTER_DIR}/pgadmin4:/var/lib/pgadmin
+    networks:
+      db-intranet: {}
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_CONFIG_LOG_FILE: "'/dev/null'"
+    mem_limit: 1G
+    mem_reservation: 256m
+    cpus: 1
+
+  databasus:
+    container_name: databasus
+    image: databasus/databasus:latest
+    ports:
+      - "100.88.0.70:4005:4005"
+    volumes:
+      - ${MASTER_DIR}/databasus:/databasus-data
+    restart: unless-stopped
+    networks:
+      db-intranet: {}
+    mem_limit: 512M
+    mem_reservation: 256m
+    cpus: 1
+
+networks:
+  db-intranet:
+    external: true

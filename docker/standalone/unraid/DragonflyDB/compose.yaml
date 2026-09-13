@@ -1,0 +1,26 @@
+services:
+  dragonfly:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:${IMAGE_VERSION}
+    container_name: dragonflydb-internal
+    hostname: dragonflydb
+    env_file:
+      - .env
+    ulimits:
+      memlock: -1
+    ports:
+      - "6379:6379"
+    networks:
+      db-intranet:
+    restart: always
+    volumes:
+      - ${MASTER_DIR}:/data
+    mem_limit: 1G
+    mem_reservation: 1G
+    cpus: 4
+    labels:
+      net.unraid.docker.icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/redis.png"
+      net.unraid.docker.managed: "dockerman"
+      
+networks:
+  db-intranet:
+    external: true

@@ -1,0 +1,14 @@
+services:
+  3proxy:
+    image: ghcr.io/tarampampam/3proxy:2.2
+    container_name: proxy-server
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - '8080:8080/tcp'
+      - '1080:1080/tcp'
+    ulimits:
+      nofile:
+        soft: 20000
+        hard: 20000

@@ -1,0 +1,35 @@
+services:
+  termix:
+    image: ghcr.io/lukegus/termix:latest
+    env_file:
+      - .env
+    container_name: termix
+    restart: unless-stopped
+    volumes:
+      - /mnt/user/appdata/termix:/app/data
+    depends_on:
+      - guacd
+    networks:
+      - traefik-intranet
+    labels:
+      net.unraid.docker.icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/termix.png"
+      net.unraid.docker.managed: "dockerman"
+    mem_limit: 1G
+    mem_reservation: 1G
+      
+  guacd:
+    image: guacamole/guacd:1.6.0
+    hostname: ${GUACD_HOST}
+    container_name: guacd
+    restart: unless-stopped
+    networks:
+      - traefik-intranet
+    labels:
+      net.unraid.docker.icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/apache-guacamole.png"
+      net.unraid.docker.managed: "dockerman"
+    mem_limit: 256mb
+    mem_reservation: 256mb
+      
+networks:
+  traefik-intranet:
+    external: true
