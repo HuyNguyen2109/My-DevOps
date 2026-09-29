@@ -20,7 +20,7 @@ Because unRAID runs its root filesystem entirely in RAM (rebuilt from USB on eve
 
 | Name | IP | SSH User | Builtin NIC MAC (WOL) | USB Adapter MAC |
 |---|---|---|---|---|
-| proxmox-00 | 192.168.1.10 | root | `14:02:ec:49:37:30` | `c8:4d:44:23:3e:49` |
+| proxmox-00 | 192.168.1.9 | root | `14:02:ec:49:37:30` | `c8:4d:44:23:3e:49` |
 | talos-01 | 192.168.1.12 | ubuntu | `6c:4b:90:3b:d6:1b` | `c8:4d:44:23:3e:3a` |
 | talos-02 | 192.168.1.13 | ubuntu | `6c:4b:90:5e:c3:9e` | `c8:4d:44:23:3e:4a` |
 

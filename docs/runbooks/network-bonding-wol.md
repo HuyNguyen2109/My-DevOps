@@ -14,7 +14,7 @@ All nodes use **active-backup bonding** with a 2.5G USB NIC (CyberPower RTL8156/
 
 | Node | Bond | Onboard NIC | USB NIC (Primary) | Bond MAC | IP |
 |------|------|-------------|-------------------|----------|----|
-| proxmox-00 | bond0 | eno1 (1G) | enxc84d44233e49 (2.5G) | (USB NIC MAC) | 192.168.1.10 |
+| proxmox-00 | bond0 | eno1 (1G) | enxc84d44233e49 (2.5G) | (USB NIC MAC) | 192.168.1.9 |
 | talos-01 | bond0 | enp0s31f6 | enxc84d44233e3a (2.5G) | `8a:c0:fc:36:31:75` | 192.168.1.12 |
 | talos-02 | bond0 | (onboard) | enxc84d44233e4a (2.5G) | (USB NIC MAC) | 192.168.1.13 |
 | tower.local | bond0 | eth1 (1G) | eth0/enxc84d44233e3c (2.5G) | (USB NIC MAC) | 192.168.1.40 |
@@ -164,7 +164,7 @@ cat /sys/class/net/bond0/bonding/active_slave
 
 proxmox-00 uses a bridge (`vmbr0`) over the bond (not directly on bond0):
 ```
-vmbr0 (bridge, IP 192.168.1.10)
+vmbr0 (bridge, IP 192.168.1.9)
   └─ bond0 (active-backup)
        ├─ eno1 (1G Intel i350)
        └─ enxc84d44233e49 (2.5G USB r8152, PRIMARY)

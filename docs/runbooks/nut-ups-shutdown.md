@@ -104,7 +104,7 @@ NOCOMMWARNTIME 300
 Check service status on slaves:
 ```bash
 # proxmox-00
-ssh -i $HOME/ssh-keys/homelab-linux root@192.168.1.10 "systemctl status nut-monitor"
+ssh -i $HOME/ssh-keys/homelab-linux root@192.168.1.9 "systemctl status nut-monitor"
 # talos-01/02
 ssh -i $HOME/ssh-keys/homelab-linux ubuntu@192.168.1.12 "sudo systemctl status nut-monitor"
 ```
@@ -199,7 +199,7 @@ Monitor USB resets: `dmesg | grep r8152`
 sshpass -p "$(cat $HOME/ssh-keys/.unraid-password.txt)" ssh root@192.168.1.40
 
 # proxmox-00
-ssh -i $HOME/ssh-keys/homelab-linux root@192.168.1.10
+ssh -i $HOME/ssh-keys/homelab-linux root@192.168.1.9
 
 # talos-01
 ssh -i $HOME/ssh-keys/homelab-linux ubuntu@192.168.1.12

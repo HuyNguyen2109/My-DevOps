@@ -47,3 +47,5 @@ Thumbs.db
 .default-*.txt
 */.ssh-credentials/*
 .thorclient/environments/Vault.thorenv
+.env
+.creds

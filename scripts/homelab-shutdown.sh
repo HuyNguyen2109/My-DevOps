@@ -5,7 +5,7 @@
 # Runs on: tower.local (unRAID 7.3.0, 192.168.1.40) via User Scripts plugin
 #
 # Hosts shut down in parallel:
-#   proxmox-00 (192.168.1.10) — Proxmox VE; handles talos-00 VM automatically
+#   proxmox-00 (192.168.1.9) — Proxmox VE; handles talos-00 VM automatically
 #   talos-01   (192.168.1.12) — bare-metal k8s node
 #   talos-02   (192.168.1.13) — bare-metal k8s node
 #
@@ -21,7 +21,7 @@ set -uo pipefail
 # =============================================================================
 # Format: "name ip ssh_user"
 HOSTS=(
-  "proxmox-00  192.168.1.10  root"
+  "proxmox-00  192.168.1.9  root"
   "talos-01    192.168.1.12  ubuntu"
   "talos-02    192.168.1.13  ubuntu"
 )
@@ -51,7 +51,7 @@ fi
 # =============================================================================
 update_hosts() {
   local entries=(
-    "192.168.1.10 proxmox-00"
+    "192.168.1.9 proxmox-00"
     "192.168.1.12 talos-01"
     "192.168.1.13 talos-02"
   )

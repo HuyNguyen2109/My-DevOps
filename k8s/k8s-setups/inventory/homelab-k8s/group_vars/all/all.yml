@@ -16,9 +16,9 @@ bin_dir: /usr/local/bin
 # access_ip: 1.1.1.1
 
 
-## API server endpoint — points to talos-alpha (sole control-plane)
+## API server endpoint — points to talos-00 (sole control-plane, migrated from talos-alpha 2026-07-22)
 loadbalancer_apiserver:
-  address: 192.168.1.10
+  address: 192.168.1.11
   port: 6443
 
 ## Local loadbalancer should use this port

@@ -102,11 +102,9 @@ export NETBIRD_SERVER_TAG="latest"
 export NETBIRD_DASHBOARD_TAG="latest"
 export SWARM_NODE_CODENAME="$SWARM_NODE_CODENAME"
 
-NETBIRD_AUTH_SECRET="guayeHDCpTkBTqECJ4O6PyXA5zPy1mWv0wAvngwOgjQ"
-NETBIRD_STORE_ENCRYPTION_KEY="Hc25Ohlbk0BvIjUU1GjP/y82X/1B2qENEVl7q2T17uc="
-
-# NETBIRD_AUTH_SECRET="$(get_or_create_vault_secret "netbird-auth-secret" generate_auth_secret "NetBird relay auth secret")"
-# NETBIRD_STORE_ENCRYPTION_KEY="$(get_or_create_vault_secret "netbird-store-encryption-key" generate_store_key "NetBird store encryption key")"
+# Secrets are fetched from Vault (never hardcoded). Review them before running:
+NETBIRD_AUTH_SECRET="$(get_or_create_vault_secret "netbird-auth-secret" generate_auth_secret "NetBird relay auth secret")"
+NETBIRD_STORE_ENCRYPTION_KEY="$(get_or_create_vault_secret "netbird-store-encryption-key" generate_store_key "NetBird store encryption key")"
 
 log "🧹 Removing existing NetBird stack and Docker configs..."
 docker stack rm "$STACK_NAME" >/dev/null 2>&1 || true

@@ -1,0 +1,119 @@
+{
+    "Stuns": [
+        {
+            "Proto": "udp",
+            "URI": "stun:{NETBIRD_PUBLIC_URL}:3478",
+            "Username": "",
+            "Password": ""
+        }
+    ],
+    "TURNConfig": {
+        "TimeBasedCredentials": false,
+        "CredentialsTTL": "12h0m0s",
+        "Secret": "secret",
+        "Turns": [
+            {
+                "Proto": "udp",
+                "URI": "turn:{NETBIRD_PUBLIC_URL}:3478",
+                "Username": "self",
+                "Password": "{PASSWORD}"
+            }
+        ]
+    },
+    "Relay": {
+        "Addresses": [
+            "rels://{NETBIRD_PUBLIC_URL}/relay"
+        ],
+        "CredentialsTTL": "24h0m0s",
+        "Secret": "{SECRET}"
+    },
+    "Signal": {
+        "Proto": "https",
+        "URI": "{NETBIRD_PUBLIC_URL}:443",
+        "Username": "",
+        "Password": ""
+    },
+    "Datadir": "/var/lib/netbird/",
+    "DataStoreEncryptionKey": "{ENCRYPTION_KEY}",
+    "HttpConfig": {
+        "LetsEncryptDomain": "",
+        "CertFile": "",
+        "CertKey": "",
+        "AuthClientID": "",
+        "AuthAudience": "381851642078691334",
+        "CLIAuthAudience": "",
+        "AuthIssuer": "{IDP_URL}",
+        "AuthUserIDClaim": "",
+        "AuthKeysLocation": "{IDP_URL}/oauth/v2/keys",
+        "OIDCConfigEndpoint": "{IDP_URL}/.well-known/openid-configuration",
+        "IdpSignKeyRefreshEnabled": false,
+        "ExtraAuthAudience": "",
+        "AuthCallbackURL": ""
+    },
+    "IdpManagerConfig": {
+        "ManagerType": "none",
+        "ClientConfig": {
+            "Issuer": "{IDP_URL}",
+            "TokenEndpoint": "{IDP_URL}/oauth/v2/token",
+            "ClientID": "{CLIENT_ID}",
+            "ClientSecret": "{CLIENT_SECRET}",
+            "GrantType": "client_credentials"
+        },
+        "ExtraConfig": {},
+        "Auth0ClientCredentials": null,
+        "AzureClientCredentials": null,
+        "KeycloakClientCredentials": null,
+        "ZitadelClientCredentials": null
+    },
+    "DeviceAuthorizationFlow": {
+        "Provider": "none",
+        "ProviderConfig": {
+            "ClientID": "",
+            "ClientSecret": "",
+            "Domain": "",
+            "Audience": "381851642078691334",
+            "TokenEndpoint": "{IDP_URL}/oauth/v2/token",
+            "DeviceAuthEndpoint": "{IDP_URL}/oauth/v2/device_authorization",
+            "AuthorizationEndpoint": "",
+            "Scope": "openid",
+            "UseIDToken": false,
+            "RedirectURLs": null,
+            "DisablePromptLogin": false,
+            "LoginFlag": 0
+        }
+    },
+    "PKCEAuthorizationFlow": {
+        "ProviderConfig": {
+            "ClientID": "381851642078691334",
+            "ClientSecret": "ljM8cJJpHow37Ew5Sfc6doYijsUyYxSoh5ifueAndDVzoL4JPSq5FXQjCzEmRgLc",
+            "Domain": "",
+            "Audience": "381851642078691334",
+            "TokenEndpoint": "{IDP_URL}/oauth/v2/token",
+            "DeviceAuthEndpoint": "",
+            "AuthorizationEndpoint": "{IDP_URL}/oauth/v2/authorize",
+            "Scope": "",
+            "UseIDToken": false,
+            "RedirectURLs": [
+                "http://localhost:53000"
+            ],
+            "DisablePromptLogin": false,
+            "LoginFlag": 0
+        }
+    },
+    "StoreConfig": {
+        "Engine": "sqlite"
+    },
+    "ReverseProxy": {
+        "TrustedHTTPProxies": [
+            "0.0.0.0/0"
+        ],
+        "TrustedHTTPProxiesCount": 1,
+        "TrustedPeers": [
+            "0.0.0.0/0"
+        ],
+        "AccessLogRetentionDays": 0,
+        "AccessLogCleanupIntervalHours": 0
+    },
+    "DisableDefaultPolicy": false,
+    "EmbeddedIdP": null
+}
