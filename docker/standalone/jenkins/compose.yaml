@@ -28,6 +28,11 @@ services:
   jenkins:
     image: jenkins/jenkins:lts-jdk21
     container_name: jenkins
+    logging:
+      driver: json-file
+      options:
+        max-size: 50m
+        max-file: "3"
     user: root
     depends_on:
       cert-init:

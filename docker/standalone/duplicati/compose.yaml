@@ -13,7 +13,7 @@ services:
     labels:
       net.unraid.docker.icon: "https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/duplicati-logo.png"
       net.unraid.docker.managed: "dockerman"
-    restart: unless-stopped
+    restart: always
     cpus: 1.5
     mem_limit: 2G
     mem_reservation: 2G

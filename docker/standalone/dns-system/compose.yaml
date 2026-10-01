@@ -1,0 +1,15 @@
+services:
+  adguard:
+    image: klutchell/unbound
+    container_name: unbound
+    restart: always
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "80:80/tcp"
+      - "3000:3000/tcp"
+      - "853:853/tcp"
+      - "443:443/tcp"
+    volumes:
+      - ${MASTER_DIR}/adguard/conf:/opt/adguardhome/conf
+      - ${MASTER_DIR}/adguard/work:/opt/adguardhome/work

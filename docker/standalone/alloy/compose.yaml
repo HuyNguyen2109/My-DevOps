@@ -1,24 +1,38 @@
-name: alloy-tower
+name: alloy-talosc00
 
 services:
   alloy:
     image: grafana/alloy:v1.16.1
-    container_name: tower-alloy
+    container_name: talos-cloud-00-alloy
+    mem_limit: 512M
+    mem_reservation: 256M
     restart: unless-stopped
     command:
       - run
       - --server.http.listen-addr=0.0.0.0:12345
       - /etc/alloy/config.alloy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./config.alloy:/etc/alloy/config.alloy:ro
       - /var/log:/var/log:ro
+      - /var/log/journal:/var/log/journal:ro
+      - /run/log/journal:/run/log/journal:ro
+      - /etc/machine-id:/etc/machine-id:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock
+    logging:
+      driver: json-file
+      options:
+        max-size: 50m
+        max-file: "3"
     networks: [obs-net]
 
   node-exporter:
     image: prom/node-exporter:v1.12.1
-    container_name: tower-node-exporter
+    container_name: talos-cloud-00-node-exporter
+    mem_limit: 128M
+    mem_reservation: 64M
     restart: unless-stopped
     pid: host
     network_mode: host
@@ -29,4 +43,4 @@ services:
 
 networks:
   obs-net:
-    external: true
+    driver: bridge

@@ -12,6 +12,13 @@ services:
   web:
     image: ghcr.io/kanbn/kan:latest
     container_name: kan-web
+    mem_limit: 1G
+    mem_reservation: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: 50m
+        max-file: "3"
     hostname: kanbn
     networks:
       proxy:

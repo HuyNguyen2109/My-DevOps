@@ -18,7 +18,7 @@
 #   bash install_agent.sh
 set -euo pipefail
 
-CONFIG_SRC="/etc/alloy/config.alloy"   # copy from repo: docker/proxmox-00/alloy/config.alloy
+CONFIG_SRC="/etc/alloy/config.alloy"   # copy from repo: docker/standalone/alloy/config.proxmox-00.alloy.example
 
 echo "== installing node-exporter (Debian package) =="
 apt-get update -qq

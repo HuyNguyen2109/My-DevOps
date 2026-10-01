@@ -1,0 +1,60 @@
+groups:
+  - name: host-stability
+    rules:
+      - alert: HostMemoryAvailableLow
+        expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) < 0.12
+        for: 10m
+        labels:
+          severity: warning
+          namespace: "{{ $labels.host }}"
+        annotations:
+          summary: "{{ $labels.host }}: memory available below 12%"
+          description: "MemAvailable={{ $value | humanizePercentage }} on {{ $labels.instance }}"
+
+      - alert: HostMemoryAvailableCritical
+        expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) < 0.06
+        for: 5m
+        labels:
+          severity: critical
+          namespace: "{{ $labels.host }}"
+        annotations:
+          summary: "{{ $labels.host }}: memory available below 6% - OOM imminent"
+          description: "MemAvailable={{ $value | humanizePercentage }} on {{ $labels.instance }}"
+
+      - alert: HostSwapFillingUp
+        expr: node_memory_SwapTotal_bytes > 0 and (1 - node_memory_SwapFree_bytes / node_memory_SwapTotal_bytes) > 0.8
+        for: 30m
+        labels:
+          severity: warning
+          namespace: "{{ $labels.host }}"
+        annotations:
+          summary: "{{ $labels.host }}: swap usage above 80%"
+          description: "Swap used={{ $value | humanizePercentage }}"
+
+      - alert: HostLoadHigh
+        expr: (node_load1 / on(host) group_left() count by (host) (node_cpu_seconds_total{mode="idle"})) > 1.5
+        for: 15m
+        labels:
+          severity: warning
+          namespace: "{{ $labels.host }}"
+        annotations:
+          summary: "{{ $labels.host }}: load1 exceeds 1.5x CPU cores for 15m"
+          description: "load1/cores={{ $value | printf \"%.2f\" }}"
+
+      - alert: HostCPUPressureHigh
+        expr: rate(node_pressure_cpu_waiting_seconds_total[5m]) > 0.2
+        for: 10m
+        labels:
+          severity: warning
+          namespace: "{{ $labels.host }}"
+        annotations:
+          summary: "{{ $labels.host }}: CPU pressure - runnable tasks waiting over 20% of time"
+
+      - alert: HostMemoryPressureStalled
+        expr: rate(node_pressure_memory_stalled_seconds_total[5m]) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          namespace: "{{ $labels.host }}"
+        annotations:
+          summary: "{{ $labels.host }}: memory pressure - tasks stalled over 10% of time"

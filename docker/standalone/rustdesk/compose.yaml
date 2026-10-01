@@ -1,6 +1,13 @@
 services:
   hbbs:
     container_name: rustdesk-hbbs
+    mem_limit: 256M
+    mem_reservation: 128M
+    logging:
+      driver: json-file
+      options:
+        max-size: 50m
+        max-file: "3"
     image: rustdesk/rustdesk-server:latest
     command: hbbs
     env_file:
@@ -14,6 +21,13 @@ services:
 
   hbbr:
     container_name: rustdesk-hbbr
+    mem_limit: 256M
+    mem_reservation: 128M
+    logging:
+      driver: json-file
+      options:
+        max-size: 50m
+        max-file: "3"
     image: rustdesk/rustdesk-server:latest
     command: hbbr
     env_file:

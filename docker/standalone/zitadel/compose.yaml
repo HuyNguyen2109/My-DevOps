@@ -2,6 +2,11 @@ services:
   zitadel-api:
     image: ghcr.io/zitadel/zitadel:${ZITADEL_VERSION}
     container_name: zitadel-api
+    logging:
+      driver: json-file
+      options:
+        max-size: 50m
+        max-file: "3"
     extra_hosts:
       - "unraid.internal:192.168.1.40"
     restart: always
@@ -70,6 +75,11 @@ services:
   zitadel-login:
     image: ghcr.io/zitadel/zitadel-login:${ZITADEL_VERSION}
     container_name: zitadel-login
+    logging:
+      driver: json-file
+      options:
+        max-size: 50m
+        max-file: "3"
     restart: always
     user: "0"
     environment:

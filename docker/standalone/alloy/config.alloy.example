@@ -3,6 +3,7 @@ logging {
 }
 
 loki.source.journal "system" {
+  max_age    = "2h"
   forward_to = [loki.relabel.host.receiver]
 }
 
@@ -34,13 +35,13 @@ loki.relabel "host" {
 
 loki.write "central" {
   endpoint {
-    url = "http://100.88.153.244:3100/loki/api/v1/push"
+    url = "http://100.88.110.94:3100/loki/api/v1/push"
   }
 }
 
 prometheus.scrape "node" {
   targets = [{
-    __address__ = "100.88.0.70:9100",
+    __address__ = "100.116.205.94:9100",
   }]
   forward_to = [prometheus.relabel.host_metrics.receiver]
 }
@@ -56,6 +57,6 @@ prometheus.relabel "host_metrics" {
 
 prometheus.remote_write "central" {
   endpoint {
-    url = "http://100.88.153.244:9090/api/v1/write"
+    url = "http://100.88.110.94:9090/api/v1/write"
   }
 }

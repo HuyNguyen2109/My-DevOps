@@ -24,19 +24,19 @@ loki.relabel "host" {
 
   rule {
     target_label = "host"
-    replacement   = "tower"
+    replacement   = "talos-cloud-01"
   }
 }
 
 loki.write "central" {
   endpoint {
-    url = "http://100.88.153.244:3100/loki/api/v1/push"
+    url = "http://loki:3100/loki/api/v1/push"
   }
 }
 
 prometheus.scrape "node" {
   targets = [{
-    __address__ = "192.168.1.40:9100",
+    __address__ = "100.88.110.94:9100",
   }]
   forward_to = [prometheus.relabel.host_metrics.receiver]
 }
@@ -46,12 +46,12 @@ prometheus.relabel "host_metrics" {
 
   rule {
     target_label = "host"
-    replacement   = "tower"
+    replacement   = "talos-cloud-01"
   }
 }
 
 prometheus.remote_write "central" {
   endpoint {
-    url = "http://100.88.153.244:9090/api/v1/write"
+    url = "http://prometheus:9090/api/v1/write"
   }
 }

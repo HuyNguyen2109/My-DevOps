@@ -1,0 +1,52 @@
+{
+  # Set the ACME DNS challenge provider to use Cloudflare for all sites
+  acme_dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+}
+
+jenkins.mcb-homelab.com {
+  encode zstd gzip
+  reverse_proxy http://jenkins:8080
+}
+
+kanban.mcb-homelab.com {
+  reverse_proxy http://kanbn:3000
+}
+
+idp.mcb-homelab.com {
+  reverse_proxy /ui/v2/login/* http://zitadel-login:3000
+  reverse_proxy http://zitadel-api:8080
+}
+
+netbird.mcb-homelab.com {
+  # Relay (WebSocket)
+  reverse_proxy /relay* relay:80
+
+  # Signal WebSocket
+  reverse_proxy /ws-proxy/signal* signal:80
+
+  # Signal gRPC (h2c for plaintext HTTP/2)
+  reverse_proxy /signalexchange.SignalExchange/* h2c://signal:10000
+
+  # Management API
+  reverse_proxy /api/* management:80
+
+  # Management WebSocket
+  reverse_proxy /ws-proxy/management* management:80
+
+  # Management gRPC
+  reverse_proxy /management.ManagementService/* h2c://management:80
+
+  # Proxy gRPC (only needed if using the Reverse Proxy feature)
+  reverse_proxy /management.ProxyService/* h2c://management:80
+
+  # Embedded IdP OAuth2
+  reverse_proxy /oauth2/* management:80
+
+  # Dashboard (catch-all)
+  reverse_proxy /* dashboard:80
+}
+
+# Custom Tailscale DERP server cert (issued via ACME DNS-01; derper binds :8443 directly)
+derp.mcb-homelab.com {
+    respond "derp cert" 200
+}

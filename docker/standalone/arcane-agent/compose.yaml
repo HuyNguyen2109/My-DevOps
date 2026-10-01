@@ -3,18 +3,25 @@ services:
     image: ghcr.io/getarcaneapp/arcane-headless:latest
     container_name: arcane-agent
     restart: unless-stopped
-    environment:
-      - AGENT_MODE=true
-      - EDGE_TRANSPORT=poll
-      - AGENT_TOKEN=arc_d10997db84ee16ee07bb9480ebbbad53886bf9e4ef51dd402b00d133b1892d7a
-      - MANAGER_API_URL=https://dashboard.mcb-homelab.com
-      - LOG_LEVEL=debug
+    env_file:
+      - .env
     ports:
-      - "3553:3553"
+      - "100.116.205.94:3553:3553"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /opt/arcane-data:/app/data
       - /mnt/docker-data/arcane/projects:/app/data/projects
       - /mnt/docker-data/arcane/templates:/app/data/templates
-    mem_limit: 1G
+    mem_limit: 2G
     mem_reservation: 1G
+    logging:
+      driver: json-file
+      options:
+        max-size: 50m
+        max-file: "3"
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true

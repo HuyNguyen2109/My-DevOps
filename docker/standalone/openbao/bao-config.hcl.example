@@ -1,0 +1,15 @@
+ui = true
+storage "postgresql" {
+  connection_url = "postgres://vault-admin:{POSTGRES_PASSWORD}@172.18.0.1:5432/vault-data-oci?sslmode=disable"
+  table           = "openbao_kv_store"
+  ha_table        = "openbao_ha_locks"
+}
+listener "tcp" {
+  address = "0.0.0.0:8200"
+  tls_disable = 1
+}
+seal "ocikms" {
+  key_id              = "{OCI_KMS_KEY_ID}"
+  crypto_endpoint     = "{OCI_KMS_CRYPTO_ENDPOINT}"
+  management_endpoint = "{OCI_KMS_MANAGEMENT_ENDPOINT}"
+}

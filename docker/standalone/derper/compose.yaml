@@ -1,0 +1,18 @@
+x-default: &default
+  restart: 'unless-stopped'
+  env_file:
+    - .env
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '100m'
+      max-file: '2'
+
+services:
+  derper:
+    <<: *default
+    image: fredliang/derper:v1.102.4
+    container_name: talos-cloud-00-derper
+    network_mode: host
+    volumes:
+      - ./certs:/certs:ro
