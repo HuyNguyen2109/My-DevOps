@@ -1,2 +1,5 @@
 .env
 telegram_token
+# Example/template variants must stay trackable.
+!.env.example
+!telegram_token.example

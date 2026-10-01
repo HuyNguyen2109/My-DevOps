@@ -1,2 +1,5 @@
 bao-config.hcl
 *.env
+# Example/template variants must stay trackable.
+!.env.example
+!bao-config.hcl.example

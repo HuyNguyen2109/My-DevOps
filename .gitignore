@@ -1,4 +1,8 @@
 *.env
+# NOTE: only ignore real env files; example/template env files must stay trackable.
+# `*.env` does not match `.env.example`, but negate explicitly so a future
+# pattern like `.env*` can never silently ignore them.
+!*.env.example
 .idea
 *.log
 # Local Terraform state
@@ -47,5 +51,4 @@ Thumbs.db
 .default-*.txt
 */.ssh-credentials/*
 .thorclient/environments/Vault.thorenv
-.env
 .creds
