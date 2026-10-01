@@ -20,7 +20,7 @@ schema_config:
 storage_config:
   aws:
     s3: s3://${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}@${AWS_ENDPOINTS}/loki
-    endpoint: https://s3.mcb-homelab.com
+    endpoint: https://{S3_ENDPOINT}
     region: auto
     s3forcepathstyle: true
 compactor:

@@ -3,21 +3,21 @@
   acme_dns cloudflare {env.CLOUDFLARE_API_TOKEN}
 }
 
-jenkins.mcb-homelab.com {
+<{JENKINS_DOMAIN}> {
   encode zstd gzip
   reverse_proxy http://jenkins:8080
 }
 
-kanban.mcb-homelab.com {
+<{KANBAN_DOMAIN}> {
   reverse_proxy http://kanbn:3000
 }
 
-idp.mcb-homelab.com {
+<{IDP_DOMAIN}> {
   reverse_proxy /ui/v2/login/* http://zitadel-login:3000
   reverse_proxy http://zitadel-api:8080
 }
 
-netbird.mcb-homelab.com {
+<{NETBIRD_DOMAIN}> {
   # Relay (WebSocket)
   reverse_proxy /relay* relay:80
 
@@ -47,6 +47,6 @@ netbird.mcb-homelab.com {
 }
 
 # Custom Tailscale DERP server cert (issued via ACME DNS-01; derper binds :8443 directly)
-derp.mcb-homelab.com {
+<{DERP_DOMAIN}> {
     respond "derp cert" 200
 }

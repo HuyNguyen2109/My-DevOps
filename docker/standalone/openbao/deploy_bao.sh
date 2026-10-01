@@ -9,7 +9,8 @@
 set -euo pipefail
 MODE="${1:?usage: deploy_bao.sh stage|prod}"
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TGT="opc@140.245.100.82"; KEY="/root/ssh-keys/oracle"; REM="/docker-volume/arcane/projects/OpenBao"
+: "${TALOS_CLOUD_01_SSH:?Set TALOS_CLOUD_01_SSH (e.g. opc@<public-ip>) to deploy}"
+TGT="$TALOS_CLOUD_01_SSH"; KEY="/root/ssh-keys/oracle"; REM="/docker-volume/arcane/projects/OpenBao"
 ENV_SRC="/mnt/user/appdata/arcane/projects/Hashicorp-Vault/.env"
 HTTP() { ssh -i /root/ssh-keys/homelab-linux root@192.168.1.40 "$1"; }
 

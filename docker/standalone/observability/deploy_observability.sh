@@ -3,7 +3,8 @@
 # Fallback path if Arcane API is unavailable (see Task 1 decision).
 set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TARGET="opc@140.245.100.82"
+: "${TALOS_CLOUD_01_SSH:?Set TALOS_CLOUD_01_SSH (e.g. opc@<public-ip>) to deploy}"
+TARGET="$TALOS_CLOUD_01_SSH"
 SSH_KEY="/root/ssh-keys/oracle"
 REMOTE_DIR="/docker-volume/observability"
 
@@ -32,8 +33,9 @@ chmod 600 "${DIR}/telegram_token"
 echo "== preparing remote dirs =="
 ssh -i "$SSH_KEY" "$TARGET" "sudo mkdir -p ${REMOTE_DIR}/{loki,prometheus,grafana,alertmanager} && sudo chown -R \$(id -u):\$(id -g) ${REMOTE_DIR}"
 
-echo "== uploading stack =="
+echo "== uploading stack (configs stored as *.example, renamed to real names on the host) =="
 scp -i "$SSH_KEY" -r "${DIR}/compose.yaml" "${DIR}/config" "${DIR}/.env" "${DIR}/telegram_token" "$TARGET":/tmp/obs/
+ssh -i "$SSH_KEY" "$TARGET" "cd /tmp/obs/config && find . -name '*.example' -exec sh -c 'mv \"\$1\" \"\${1%.example}\"' _ {} \;"
 ssh -i "$SSH_KEY" "$TARGET" "sudo cp -r /tmp/obs/* ${REMOTE_DIR}/ && sudo chmod 600 ${REMOTE_DIR}/telegram_token"
 
 echo "== starting stack =="

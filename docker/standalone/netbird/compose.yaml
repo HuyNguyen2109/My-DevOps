@@ -57,7 +57,7 @@ services:
       "--log-file", "console",
       "--log-level", "info",
       "--disable-anonymous-metrics=false",
-      "--single-account-mode-domain=netbird.mcb-homelab.com",
+      "--single-account-mode-domain={NETBIRD_DOMAIN}",
       "--dns-domain=netbird.selfhosted",
       "--disable-single-account-mode"
     ]

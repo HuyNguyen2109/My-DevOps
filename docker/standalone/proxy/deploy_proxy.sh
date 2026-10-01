@@ -3,12 +3,13 @@
 # Fallback path if the Arcane API is unavailable (see migration plan Task 5).
 set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TGT="opc@140.245.100.82"; KEY="/root/ssh-keys/oracle"; REM="/docker-volume/arcane/projects/Proxy"
+: "${TALOS_CLOUD_01_SSH:?Set TALOS_CLOUD_01_SSH (e.g. opc@<public-ip>) to deploy}"
+TGT="$TALOS_CLOUD_01_SSH"; KEY="/root/ssh-keys/oracle"; REM="/docker-volume/arcane/projects/Proxy"
 
 echo "== uploading proxy project =="
 UP="/tmp/proxy-update-$(date +%s)"
 ssh -i "$KEY" "$TGT" "sudo rm -rf /tmp/proxy-update /tmp/proxy-update-*; mkdir -p $UP; sudo mkdir -p $REM"
-scp -i "$KEY" -r "$DIR/compose.yaml" "$DIR/Caddyfile" "$TGT":"$UP/"
+scp -i "$KEY" -r "$DIR/compose.yaml" "$DIR/Caddyfile.example" "$TGT":"$UP/Caddyfile"
 ssh -i "$KEY" "$TGT" "sudo cp -r $UP/* $REM/ && cd $REM && sudo docker compose up -d"
 
 echo "== containers =="
