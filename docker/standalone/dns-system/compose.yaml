@@ -1,15 +1,22 @@
 services:
-  adguard:
+  unbound:
     image: klutchell/unbound
     container_name: unbound
-    restart: always
+    restart: unless-stopped
     ports:
-      - "53:53/tcp"
-      - "53:53/udp"
-      - "80:80/tcp"
-      - "3000:3000/tcp"
-      - "853:853/tcp"
-      - "443:443/tcp"
+      - "5335:53/tcp"
+      - "5335:53/udp"
     volumes:
-      - ${MASTER_DIR}/adguard/conf:/opt/adguardhome/conf
-      - ${MASTER_DIR}/adguard/work:/opt/adguardhome/work
+      # Network-mode fragment: access-control (AdGuard only) + hardening deltas
+      - ./unbound.conf:/etc/unbound/custom.conf.d/recursive.conf:ro
+    healthcheck:
+      test: ["CMD", "drill-hc", "@127.0.0.1", "dnssec.works"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "2"
