@@ -20,3 +20,18 @@ services:
       options:
         max-size: "10m"
         max-file: "2"
+
+  adguardhome-sync:
+    image: ghcr.io/bakito/adguardhome-sync
+    container_name: adguardhome-sync
+    restart: unless-stopped
+    command: ["run", "--config", "/config/adguardhome-sync.yaml"]
+    env_file:
+      - .env
+    ports:
+      - "8779:8080"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "2"
