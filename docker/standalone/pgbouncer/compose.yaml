@@ -11,7 +11,7 @@ services:
     env_file:
       - .env
     ports:
-      - "100.116.205.94:5432:5432"
+      - "100.88.110.94:5432:5432"
     volumes:
       - ${MASTER_DIR}/pgbouncer:/etc/pgbouncer
     restart: unless-stopped
