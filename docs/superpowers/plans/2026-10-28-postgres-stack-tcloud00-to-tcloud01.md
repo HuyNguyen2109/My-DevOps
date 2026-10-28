@@ -206,15 +206,16 @@ Expected: `[databases]` / `* = host=postgres port=5432 pool_mode=session`.
 
 ### Task 5: Deploy pgAdmin + Databasus, migrate data, re-point Databasus
 
-- [ ] **Step 1: Copy pgadmin4 + databasus data dirs (tar over SSH)**
+- [ ] **Step 1: Stop source databasus + pgadmin4 briefly for a consistent copy, then copy and restart**
 
 ```bash
 ssh -i /root/.secrets/ssh-keys/oracle root@talos-cloud-00 \
- 'tar -C /var/lib/docker-stack-data/postgres -czf - pgadmin4 databasus' \
+ 'docker stop databasus pgadmin4 && tar -C /var/lib/docker-stack-data/postgres -czf - pgadmin4 databasus' \
  | ssh -i /root/.secrets/ssh-keys/oracle opc@talos-cloud-01 \
    'sudo -n tar -C /docker-volume/docker-stack-data/postgres -xzf -'
+ssh -i /root/.secrets/ssh-keys/oracle root@talos-cloud-00 'docker start databasus pgadmin4'
 ```
-Verify `databasus/{pgdata,secret.key,instance.json,backups}` present.
+Verify `databasus/{pgdata,secret.key,instance.json,backups}` present. (Stopping Databasus does not affect the slot; streaming resumes on start.)
 
 - [ ] **Step 2: Start pgadmin4 + databasus; verify pgadmin HTTP 302 on `100.88.110.94:3001`, databasus healthy on 4005.
 
