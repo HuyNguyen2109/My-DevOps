@@ -13,6 +13,7 @@ Operational runbooks for diagnosing and fixing common homelab issues. Created 20
 | [vault-to-openbao-oci-migration.md](vault-to-openbao-oci-migration.md) | Vault→OpenBao + Azure→OCI KMS seal migration, incident record, operations |
 | [disk-management.md](disk-management.md) | LVM extension (Proxmox VM resize), log cleanup, journal tuning |
 | [vault-openbao-migration.md](vault-openbao-migration.md) | Vault → OpenBao migration (talos-cloud-01), azure seal retained (recovery keys lost), cutover + rollback |
+| [windows-vm-tower-to-prx-prd-01.md](windows-vm-tower-to-prx-prd-01.md) | Windows Server 2025 VM migration from unRAID/libvirt to prx-prd-01, 128 GiB shrink, NIC/WinRE gotchas |
 
 ## Quick Reference
 
