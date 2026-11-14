@@ -1,6 +1,6 @@
 # Windows Server 2025 — tower.local (libvirt) → prx-prd-01 (Proxmox)
 
-*Date: 2026-11-13 | Applies to: WS2025-Inspect-Lab, tower.local, prx-prd-01 (192.168.1.9)*
+*Date: 2026-11-13 | Updated: 2026-11-14 (disk moved to MirrorZFS) | Applies to: WS2025-Inspect-Lab, tower.local, prx-prd-01 (192.168.1.9)*
 
 ---
 
@@ -17,7 +17,7 @@ halving vCPU while shrinking the virtual disk to 128 GiB.
 | VMID / name | domain `WS2025-Inspect-Lab` | `102` / `WS2025-Inspect-Lab` |
 | vCPU | 8 (4 cores × 2 threads) | **4** (1 socket × 4 cores) |
 | RAM | 8192 MB | **8192 MB** |
-| Disk | 256 GiB raw (64 GiB used) | **128 GiB qcow2**, `local` storage |
+| Disk | 256 GiB raw (64 GiB used) | **128 GiB zvol**, `MirrorZFS` (RAID1) |
 | Firmware | OVMF, no Secure Boot, TPM 2.0 | OVMF 4M, `pre-enrolled-keys=0`, TPM 2.0 |
 | NIC | virtio, `52:54:00:c9:f4:0e` | virtio, same MAC, `vmbr0` |
 | IP | 192.168.1.252/24, gw .1, DNS .3/.4 | **unchanged** |
@@ -82,6 +82,27 @@ qm set 102 --boot order=virtio0
 qm start 102
 ```
 
+## Storage re-migration to MirrorZFS (2026-11-14)
+
+The data disk was live-migrated from the single-NVMe `local` qcow2 to the
+`MirrorZFS` zfspool (2× 256 GB SATA SSD mirror) with **no VM downtime**:
+
+```bash
+qm disk move 102 virtio0 MirrorZFS --delete
+```
+
+- Result: `virtio0: MirrorZFS:vm-102-disk-0,cache=writeback,discard=on,size=128G`
+- zvol: 128 GiB, `volblocksize=16K`, `refreservation=130G`, 68.9 GiB referenced
+- Transfer: 128.1 GiB in ~34 min while Windows stayed online (RDP/agent unaffected)
+- Guest after move: Disk 0 128 GB Healthy/Online, C: 126.79 GB (46.3 GB free),
+  4 vCPU / 7.9 GB RAM — resources unchanged
+
+The 528 KiB EFI disk and 4 MiB TPM state remain on `local`. Proxmox explicitly
+refuses to move TPM state while the VM is running (`cannot move TPM state while
+VM is running`), and they are small boot-state volumes; the VM *data* is what
+needs the mirror. Note that the PVE root/config also lives on the same NVMe, so
+moving these would not add much real resilience.
+
 ## Gotchas (read before repeating)
 
 - **Windows re-enumerates the NIC.** Moving the virtio NIC to a different PCI
@@ -136,6 +157,8 @@ Re-enable source autostart if rolling back permanently:
 
 - Source VM/disk kept as rollback; delete after a burn-in period and re-enable
   nothing on tower.local.
-- `local` storage has ~60 GB free after the import (128 GiB qcow2, ~80 GiB
-  allocated). Watch it before adding snapshots.
+- `MirrorZFS` has ~169 GiB free at the zpool level (PVE reports ~100 GiB because
+  the 128 GiB zvol carries a 130 GiB refreservation). Plan snapshots against
+  the zpool figure, and watch pool capacity.
+- `local` is back to ~156 GiB free after the move.
 - Windows may need reactivation on future hardware changes; currently Licensed.
