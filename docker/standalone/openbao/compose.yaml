@@ -1,12 +1,13 @@
 services:
   openbao:
-    image: ghcr.io/openbao/openbao:2.6.2
+    image: ghcr.io/openbao/openbao:2.7.2
     container_name: openbao-oci
     hostname: openbao-oci
     cap_add: [IPC_LOCK]
     networks: [proxy]
     volumes:
-      - ./bao-config.hcl:/etc/bao/bao-config.hcl:ro
+      - /docker-volume/openbao-oci/bao-config.hcl:/etc/bao/bao-config.hcl:ro
+      - /docker-volume/openbao-oci/plugins:/openbao/plugins:ro
     command: ["server", "-config=/etc/bao/bao-config.hcl"]
     restart: unless-stopped
 networks:

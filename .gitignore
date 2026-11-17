@@ -33,6 +33,7 @@ secrets.auto.tfvars
 *.kubeconfig
 id_rsa
 id_rsa.pub
+*.creds
 
 # Local working dir
 .terraform/

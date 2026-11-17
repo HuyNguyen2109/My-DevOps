@@ -14,10 +14,10 @@ spec:
   data:
     - secretKey: client_id
       remoteRef:
-        key: tailscale-oidc-auth
-        property: client_id
+        key: docker-secrets
+        property: tailscale-oauth-client-id
     - secretKey: client_secret
       remoteRef:
-        key: tailscale-oidc-auth
-        property: client_secret
+        key: docker-secrets
+        property: tailscale-oauth-client-secret
 

@@ -1,0 +1,8 @@
+[Unit]
+Description=Restart derper after its TLS certificate is renewed
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/derper-cert-guard

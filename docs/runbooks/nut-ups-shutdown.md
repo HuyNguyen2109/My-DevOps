@@ -190,6 +190,81 @@ Mitigation: Existing infrastructure on proxmox-00 handles re-enslavement:
 
 Monitor USB resets: `dmesg | grep r8152`
 
+### Symptom: UPS USB device disconnects/reconnects every ~10 s, NUT won't start
+
+Log signature:
+
+```
+kernel: usb 1-1.x: USB disconnect, device number N
+kernel: usb 1-1.x: new low-speed USB device number N+1 using xhci_hcd
+kernel: hid-generic 0003:0764:0501....: ... [CPS VP1200ELCD]
+rc.nut: No matching HID UPS found
+rc.nut: Driver failed to start (exit status=1)
+```
+
+**Root cause:** CyberPower firmware resets the USB interface every ~10 s
+**until a driver claims the device**. `usbhid-ups` scans once, loses the race
+against the reset cycle, exits, and then nothing ever claims the UPS — so the
+loop is self-sustaining. It is *not* a cable, port, hub or kernel problem:
+moving the port only moves the loop (`1-1.2` → `1-1.3`).
+
+The device number also wraps at 127 and restarts at 4; that is normal.
+
+**Proof of mechanism:** with NUT down, `dmesg | grep -c 'USB disconnect'`
+increases ~6/min. Start the driver once and the counter stops immediately:
+
+```bash
+/usr/sbin/upsdrvctl -u root start
+upsc VP1200ELCD ups.status      # OL
+```
+
+**Permanent fix** (survives unRAID's RAM root, installed 2026-11-14):
+
+`/boot/config/udev/99-nut-ups-attach.rules` — unRAID copies `*.rules` from
+`/boot/config/udev` to `/etc/udev/rules.d/` and `*.sh` to `/etc/udev/scripts/`
+at boot (`rc.S.cont`):
+
+```
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0764", ATTR{idProduct}=="0501", RUN+="/etc/udev/scripts/nut-ups-attach.sh"
+```
+
+`/boot/config/udev/nut-ups-attach.sh` — claims the UPS on every enumeration,
+starts `upsd`/`upsmon` if they are down:
+
+```bash
+#!/bin/bash
+exec 9>/run/nut-ups-attach.lock
+flock -n 9 || exit 0
+pgrep -x usbhid-ups >/dev/null && exit 0
+for _ in 1 2 3 4 5; do
+    /usr/sbin/upsdrvctl -u root start >/dev/null 2>&1 && break
+    sleep 2
+done
+pgrep -x usbhid-ups >/dev/null || exit 0
+pgrep -x upsd   >/dev/null || /usr/sbin/upsd   -u root >/dev/null 2>&1
+pgrep -x upsmon >/dev/null || /usr/sbin/upsmon -p        >/dev/null 2>&1
+logger -t nut-usb-attach "usbhid-ups attached after UPS re-enumeration"
+```
+
+Apply without rebooting:
+
+```bash
+install -p -D -m 0644 /boot/config/udev/99-nut-ups-attach.rules /etc/udev/rules.d/
+install -p -D -m 0755 /boot/config/udev/nut-ups-attach.sh     /etc/udev/scripts/
+udevadm control --reload-rules
+udevadm test --action=add /sys/bus/usb/devices/1-1.3 2>&1 | grep nut-ups-attach
+```
+
+Verify: `dmesg | grep -c 'USB disconnect'` must stop increasing, and
+`upsc VP1200ELCD ups.status` must return a value.
+
+**Do not** "fix" this by unplugging the cable and leaving NUT down: with no
+driver there is **no UPS protection at all**, and no graceful shutdown at 40 %.
+
+Note: NUT prints `You may want to set 'pollonly' flag on CPS devices` on
+startup. Do **not** enable `pollonly` — it is known to make the driver fail to
+recover after a device reset (NUT issue #1986).
+
 ---
 
 ## SSH Access Reference

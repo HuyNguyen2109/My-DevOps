@@ -1,4 +1,5 @@
 ui = true
+plugin_directory = "/openbao/plugins"
 storage "postgresql" {
   connection_url = "postgres://vault-admin:{POSTGRES_PASSWORD}@172.18.0.1:5432/vault-data-oci?sslmode=disable"
   table           = "openbao_kv_store"
@@ -7,6 +8,11 @@ storage "postgresql" {
 listener "tcp" {
   address = "0.0.0.0:8200"
   tls_disable = 1
+}
+# OpenBao 2.7+ ships cloud KMS seals as external plugins (builtin: false).
+plugin "kms" "ocikms" {
+  command = "openbao-plugin-kms-oci"
+  version = "v0.1.0"
 }
 seal "ocikms" {
   key_id              = "{OCI_KMS_KEY_ID}"

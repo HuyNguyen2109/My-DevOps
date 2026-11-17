@@ -57,6 +57,8 @@ sed -E 's#(postgres://[^:]+:)[^@]+@#\1***@#; s#(client_secret *= *")[^"]+(")#\1*
 
 echo "== uploading to $TGT:$REM (mode=$MODE) =="
 UP="/tmp/bao-update-$(date +%s)"
-ssh -i "$KEY" "$TGT" "sudo rm -rf /tmp/bao-update /tmp/bao-update-*; mkdir -p $UP; sudo mkdir -p $REM"
+# Config lives outside $REM (Arcane project dir) so Arcane syncs cannot re-own it.
+CONF_DIR="/docker-volume/openbao-oci"
+ssh -i "$KEY" "$TGT" "sudo rm -rf /tmp/bao-update /tmp/bao-update-*; mkdir -p $UP; sudo mkdir -p $REM; sudo install -d -m 700 -o root -g root $CONF_DIR"
 scp -i "$KEY" -r "$DIR/compose.yaml" "$DIR/bao-config.hcl" "$TGT":"$UP/"
-ssh -i "$KEY" "$TGT" "sudo cp -r $UP/* $REM/ && sudo chown 100:1000 $REM/bao-config.hcl && sudo chmod 600 $REM/bao-config.hcl && cd $REM && sudo docker compose up -d --force-recreate"
+ssh -i "$KEY" "$TGT" "sudo cp $UP/compose.yaml $REM/compose.yaml && sudo install -m 600 -o 100 -g 1000 $UP/bao-config.hcl $CONF_DIR/bao-config.hcl && cd $REM && sudo docker compose up -d --force-recreate"
