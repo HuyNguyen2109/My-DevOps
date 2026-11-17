@@ -22,14 +22,14 @@ persistence:
   resourcePolicy: "keep"
   persistentVolumeClaim:
     registry:
-      storageClass: synology-iscsi-storage
+      storageClass: unraid-nfs
       size: 10Gi
     jobservice:
       jobLog:
-        storageClass: synology-iscsi-storage
+        storageClass: unraid-nfs
         size: 1Gi
     trivy:
-      storageClass: synology-iscsi-storage
+      storageClass: unraid-nfs
       size: 10Gi
   imageChartStorage:
     type: s3

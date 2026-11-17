@@ -1,5 +1,5 @@
+# OAuth credentials come from External Secrets (operator-oauth-eso -> Secret
+# "operator-oauth"). The chart mounts that Secret when `oauth` is empty, so the
+# operator starts as soon as ESO syncs it.
 oauth: {}
 installCRDs: true
-operatorConfig:
-  nodeSelector:
-    topology.kubernetes.io/region: "sg-prod-01"
