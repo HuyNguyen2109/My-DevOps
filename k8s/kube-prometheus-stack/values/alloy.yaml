@@ -47,6 +47,13 @@ alloy:
       discovery.relabel "pods" {
         targets = discovery.kubernetes.pods.targets
 
+        // DaemonSet: each Alloy pod only tails logs for pods on its own node.
+        rule {
+          source_labels = ["__meta_kubernetes_pod_node_name"]
+          regex         = sys.env("NODE_NAME")
+          action        = "keep"
+        }
+
         rule {
           source_labels = ["__meta_kubernetes_namespace"]
           target_label = "namespace"
@@ -125,6 +132,13 @@ alloy:
       discovery.relabel "nodes" {
         targets = discovery.kubernetes.nodes.targets
 
+        // DaemonSet: each Alloy pod only scrapes its own node.
+        rule {
+          source_labels = ["__meta_kubernetes_node_name"]
+          regex         = sys.env("NODE_NAME")
+          action        = "keep"
+        }
+
         rule {
           source_labels = ["__meta_kubernetes_node_name"]
           target_label  = "host"
@@ -146,6 +160,13 @@ alloy:
       }
       prometheus.operator.servicemonitors "default" {
         forward_to = [prometheus.remote_write.central.receiver]
+
+        // DaemonSet: only scrape ServiceMonitor targets on this node.
+        rule {
+          source_labels = ["__meta_kubernetes_pod_node_name"]
+          regex         = sys.env("NODE_NAME")
+          action        = "keep"
+        }
       }
       prometheus.remote_write "central" {
         endpoint {
@@ -203,7 +224,11 @@ alloy:
   enableReporting: true
 
   # -- Extra environment variables to pass to the Alloy container.
-  extraEnv: []
+  extraEnv:
+    - name: NODE_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: spec.nodeName
 
   # -- Maps all the keys on a ConfigMap or Secret as environment variables. https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#envfromsource-v1-core
   envFrom: []
