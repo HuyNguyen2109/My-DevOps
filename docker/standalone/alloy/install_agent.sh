@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Native install of an Alloy agent on proxmox-00 (executed successfully 2026-09-08).
+# 2026-11-19: central stack endpoints moved from NetBird to Tailscale (100.88.110.94).
 # NOTE: this host has no Docker and no Arcane environment registered, so the
 # compose-based deploy_agent.sh path does not apply. Alloy (official Grafana DEB
 # package) and node-exporter (Debian package) run as plain systemd services.
@@ -9,10 +10,10 @@
 #   2. Internet egress from proxmox-00 (verified working).
 #
 # POST-INSTALL (connectivity to the central stack — REQUIRED for data flow):
-#   NetBird agent is installed by this script but still needs a setup key from
-#   the self-hosted NetBird management (talos-cloud-00). Once the key exists:
-#       netbird up --setup-key <KEY>
-#       ping -c2 100.88.153.244     # must succeed before logs/metrics flow
+#   Tailscale is installed by this script but still needs an auth key from the
+#   Tailscale admin console. Once the key exists:
+#       tailscale up --authkey <KEY> --hostname proxmox-00
+#       tailscale ping 100.88.110.94   # must succeed before logs/metrics flow
 #
 # Usage (as root on proxmox-00):
 #   bash install_agent.sh
@@ -46,11 +47,11 @@ systemctl enable --now prometheus-node-exporter
 systemctl enable --now alloy
 systemctl is-active alloy prometheus-node-exporter
 
-echo "== installing NetBird (connectivity to central) =="
-curl -fsSL https://pkgs.netbird.io/install.sh | bash
-netbird version
+echo "== installing Tailscale (connectivity to central) =="
+curl -fsSL https://tailscale.com/install.sh | sh
+tailscale version
 
 echo
-echo "DONE. Remaining step (human): create a setup key in the NetBird UI, then"
-echo "  netbird up --setup-key <KEY>"
-echo "Verify afterwards: ping -c2 100.88.153.244"
+echo "DONE. Remaining step (human): create a Tailscale auth key, then"
+echo "  tailscale up --authkey <KEY> --hostname proxmox-00"
+echo "Verify afterwards: tailscale ping 100.88.110.94"
