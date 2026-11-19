@@ -116,7 +116,7 @@ alloy:
       }
       loki.write "loki" {
         endpoint {
-          url = "http://100.88.153.244:3100/loki/api/v1/push"
+          url = "http://100.88.110.94:3100/loki/api/v1/push"
         }
       }
       discovery.kubernetes "nodes" {
@@ -149,7 +149,7 @@ alloy:
       }
       prometheus.remote_write "central" {
         endpoint {
-          url = "http://100.88.153.244:9090/api/v1/write"
+          url = "http://100.88.110.94:9090/api/v1/write"
         }
       }
 
